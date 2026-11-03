@@ -1,146 +1,97 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Sparkles,
-  LayoutDashboard,
-  ShoppingBag,
-  LogOut,
-  ShieldCheck,
-  ShieldAlert,
-  Loader2
+import { usePathname, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { 
+  LayoutDashboard, 
+  ShoppingBag, 
+  Package, 
+  Home, 
+  LogOut, 
+  Sparkles 
 } from 'lucide-react';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [userEmail, setUserEmail] = useState<string>('');
-  const supabase = createClient();
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const router = useRouter();
-
-  useEffect(() => {
-    const verifySession = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        setAuthorized(false);
-        return;
-      }
-
-      const email = user.email || '';
-      setUserEmail(email);
-
-      const role = user.user_metadata?.role || user.app_metadata?.role;
-
-      if (role === 'admin' || email.toLowerCase() === 'daniel.latorrec@uniagustiniana.edu.co') {
-        setAuthorized(true);
-      } else {
-        setAuthorized(false);
-      }
-    };
-
-    verifySession();
-  }, [supabase]);
+  const supabase = createClient();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/login';
+    router.push('/login');
+    router.refresh();
   };
 
-  if (authorized === null) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-        <div className="text-center space-y-3">
-          <Loader2 className="w-8 h-8 text-amber-400 animate-spin mx-auto" />
-          <p className="text-xs text-slate-400">Verificando credenciales de administración DELTA...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!authorized) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center space-y-6">
-        <div className="p-4 bg-red-950/60 border border-red-800 text-red-400 rounded-3xl">
-          <ShieldAlert className="w-12 h-12 mx-auto" />
-        </div>
-        <div className="space-y-2 max-w-sm">
-          <h1 className="text-xl font-bold text-white">Acceso Restringido</h1>
-          <p className="text-xs text-slate-400">
-            La cuenta <span className="text-amber-400 font-semibold">{userEmail || 'actual'}</span> no cuenta con permisos de administrador.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => router.push('/tienda')}
-            className="px-4 py-2.5 bg-slate-900 border border-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors"
-          >
-            Ir a la Tienda
-          </button>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
-          >
-            <LogOut className="w-4 h-4" /> Cambiar de Cuenta
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const navItems = [
+    { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Pedidos', href: '/admin/pedidos', icon: ShoppingBag },
+    { name: 'Inventario', href: '/admin/inventario', icon: Package },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row">
-      <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 p-6 flex flex-col justify-between shrink-0 space-y-6">
+      {/* Sidebar / Barra de Navegación */}
+      <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 p-6 flex flex-col justify-between shrink-0">
         <div className="space-y-8">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400">
-              <Sparkles className="w-5 h-5" />
+          {/* Logo / Título */}
+          <div className="flex items-center gap-3 px-2">
+            <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              <Sparkles className="w-5 h-5 text-amber-400" />
             </div>
             <div>
-              <span className="text-lg font-extrabold tracking-widest text-white block leading-none">DELTA</span>
-              <span className="text-[10px] text-amber-400 font-bold tracking-wider">PANEL CONTROL</span>
+              <h2 className="font-extrabold text-white text-base tracking-wider">DELTA</h2>
+              <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">Admin Control</p>
             </div>
           </div>
 
-          <nav className="space-y-1 text-xs font-semibold">
-            <Link
-              href="/admin"
-              className="flex items-center gap-3 px-4 py-3 bg-amber-500 text-slate-950 font-bold rounded-2xl transition-all shadow-md shadow-amber-500/10"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Inventario & Métricas</span>
-            </Link>
-            <Link
-              href="/tienda"
-              className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-2xl transition-colors"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Ver Menú Digital</span>
-            </Link>
+          {/* Menú de Secciones */}
+          <nav className="space-y-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/10 font-bold'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-slate-800 space-y-3">
-          <div className="flex items-center gap-2 text-xs text-slate-400 px-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span className="truncate">{userEmail}</span>
-          </div>
+        {/* Botones inferiores: Ir a Inicio y Cerrar Sesión */}
+        <div className="pt-6 border-t border-slate-800/80 space-y-2 mt-8 md:mt-0">
+          <Link
+            href="/"
+            className="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-colors"
+          >
+            <Home className="w-4 h-4 text-slate-500" />
+            Volver a la Tienda
+          </Link>
+
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-950 border border-slate-800 hover:bg-red-950/50 hover:border-red-800 text-slate-300 hover:text-red-400 rounded-xl text-xs font-semibold transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-red-400 hover:bg-red-950/40 hover:text-red-300 rounded-xl transition-colors text-left"
           >
-            <LogOut className="w-4 h-4" /> Cerrar Sesión
+            <LogOut className="w-4 h-4" />
+            Cerrar Sesión
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto">{children}</main>
+      {/* Contenido principal */}
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+        {children}
+      </main>
     </div>
   );
 }
