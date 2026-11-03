@@ -1,46 +1,59 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    'https://kzmxafjlhruldzzntugu.supabase.co';
+
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    'sb_publishable_byS9e9dJF68wCAeIxTRYmQ_iQFIQeyh';
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value)
+        );
+        supabaseResponse = NextResponse.next({
+          request,
+        });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Protección del Panel Administrativo (RBAC)
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', request.url));
     }
-  );
 
-  const { data: { user } } = await supabase.auth.getUser();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-  // Proteger /admin: si no hay sesión, redirigir a login
-  if (request.nextUrl.pathname.startsWith('/admin') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    if (!profile || profile.role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
   }
 
-  // Si ya está logueado y va a /login o /registro, redirigir a admin
-  const isAuthPage = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/registro';
-  if (isAuthPage && user) {
-    return NextResponse.redirect(new URL('/admin', request.url));
-  }
-
-  return response;
+  return supabaseResponse;
 }
-
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
-};
