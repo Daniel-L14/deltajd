@@ -7,17 +7,16 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
-  family: string;
+  image?: string;
 }
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: { id: string; name: string; price: number; family: string }) => void;
+  addToCart: (item: CartItem) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   total: number;
-  totalItems: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -25,37 +24,37 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Cargar carrito guardado en localStorage
+  // 1. Cargar datos de localStorage al iniciar
   useEffect(() => {
-    const savedCart = localStorage.getItem('delta_cart');
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart));
-      } catch (e) {
-        console.error(e);
+    try {
+      const saved = localStorage.getItem('delta_cart');
+      if (saved) {
+        setCart(JSON.parse(saved));
       }
+    } catch (e) {
+      console.error('Error al cargar carrito:', e);
     }
   }, []);
 
-  // Guardar cambios en localStorage
+  // 2. Guardar en localStorage ante cualquier cambio
   useEffect(() => {
     localStorage.setItem('delta_cart', JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (product: { id: string; name: string; price: number; family: string }) => {
-    setCart((prevCart) => {
-      const existing = prevCart.find((item) => item.id === product.id);
-      if (existing) {
-        return prevCart.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+  const addToCart = (newItem: CartItem) => {
+    setCart((prev) => {
+      const exists = prev.find((i) => i.id === newItem.id);
+      if (exists) {
+        return prev.map((i) =>
+          i.id === newItem.id ? { ...i, quantity: i.quantity + (newItem.quantity || 1) } : i
         );
       }
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prev, { ...newItem, quantity: newItem.quantity || 1 }];
     });
   };
 
   const removeFromCart = (id: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
+    setCart((prev) => prev.filter((i) => i.id !== id));
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -63,15 +62,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeFromCart(id);
       return;
     }
-    setCart((prevCart) =>
-      prevCart.map((item) => (item.id === id ? { ...item, quantity } : item))
+    setCart((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, quantity } : i))
     );
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    localStorage.removeItem('delta_cart');
+  };
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   return (
     <CartContext.Provider
@@ -82,7 +83,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         clearCart,
         total,
-        totalItems,
       }}
     >
       {children}
