@@ -2,23 +2,17 @@
 
 import { useState } from 'react';
 import { useCart } from '@/app/context/CartContext';
-import { createClient } from '@/lib/supabase/client';
-import { ShoppingBag, X, Trash2, Plus, Minus, Send, ArrowLeft } from 'lucide-react';
+import { ShoppingBag, X, Trash2, Plus, Minus, Send, ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function CatalogView() {
   const { cart, removeFromCart, updateQuantity, clearCart, total } = useCart();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  
-  // Estado para alternar entre el resumen del carrito y el formulario
   const [paso, setPaso] = useState<'carrito' | 'datos'>('carrito');
 
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const supabase = createClient();
-  const WHATSAPP_NUMBER = '573142352488'; // Número de WhatsApp de la empresa
 
   const handleConfirmarPedidoWhatsApp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,54 +30,73 @@ export default function CatalogView() {
 
     setLoading(true);
 
-    // 1. Armar mensaje formateado para WhatsApp
-    let mensaje = `✨ *NUEVO PEDIDO - DELTA PERFUMERÍA* ✨\n\n`;
-    mensaje += `👤 *Cliente:* ${nombre.trim()}\n`;
-    mensaje += `📞 *Teléfono:* ${telefono.trim()}\n`;
-    mensaje += `📍 *Dirección:* ${direccion.trim()}\n\n`;
-    mensaje += `🛍️ *DETALLE DEL PEDIDO:*\n`;
-
-    cart.forEach((item, i) => {
-      const subtotal = item.price * item.quantity;
-      mensaje += `${i + 1}. *${item.name}* x${item.quantity} - $${subtotal.toLocaleString()}\n`;
-    });
-
-    mensaje += `\n💰 *TOTAL A PAGAR:* $${total.toLocaleString()}\n\n`;
-    mensaje += `Quedo atento a la confirmación del pago. ¡Gracias!`;
-
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
-
-    // 2. Abrir WhatsApp inmediatamente sin redireccionar la página
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-
-    // 3. Guardar orden en Supabase
     try {
-      await supabase.from('pedidos').insert([
-        {
+      // 1. Crear el pedido en el servidor
+      const res = await fetch('/api/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           cliente_nombre: nombre.trim(),
           cliente_telefono: telefono.trim(),
           direccion: direccion.trim(),
-          items: cart,
-          total: total,
-          estado: 'Pendiente'
-        }
-      ]);
-    } catch (err) {
-      console.error('Error guardando pedido:', err);
-    } finally {
+          items: cart.map((c: any) => ({
+            producto_id: c.id ?? null,
+            nombre: c.name,
+            precio: Number(c.price),
+            cantidad: Number(c.quantity),
+          })),
+          estado: 'nuevo',
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error ?? 'Error al crear el pedido');
+      }
+
+      // 2. Guardar pedido completo para la página de confirmación
+      const pedidoParaConfirmar = {
+        codigo: data.codigo,
+        pedido: data.pedido,
+        items: (data.pedido.items ?? []).map((it: any, i: number) => ({
+          id: String(i),
+          nombre: it.nombre,
+          precio: it.precio,
+          cantidad: it.cantidad,
+          subtotal: it.precio * it.cantidad,
+        })),
+      };
+      localStorage.setItem('delta_ultimo_pedido', JSON.stringify(pedidoParaConfirmar));
+
+      // 3. Historial del cliente
+      try {
+        const historial = JSON.parse(localStorage.getItem('delta_pedidos') ?? '[]');
+        historial.push({
+          codigo: data.codigo,
+          total: data.total,
+          fecha: new Date().toISOString(),
+        });
+        localStorage.setItem('delta_pedidos', JSON.stringify(historial));
+      } catch {}
+
+      // 4. Limpiar y redirigir a confirmación
       clearCart();
       setNombre('');
       setTelefono('');
       setDireccion('');
       setPaso('carrito');
       setIsDrawerOpen(false);
+      window.location.href = `/tienda/pedido/${data.codigo}`;
+    } catch (err: any) {
+      console.error('Error guardando pedido:', err);
+      alert(err.message ?? 'No se pudo crear el pedido. Intenta de nuevo.');
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#070C18] text-slate-100 relative">
-      {/* Botón Flotante Superior / Encabezado */}
       <div className="p-4 flex justify-between items-center max-w-7xl mx-auto border-b border-slate-800/60">
         <h1 className="text-xl font-black tracking-widest text-white">DELTA PERFUMERÍA</h1>
         <button
@@ -99,12 +112,9 @@ export default function CatalogView() {
         </button>
       </div>
 
-      {/* DRAWER / PANEL LATERAL */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end">
           <div className="w-full max-w-md bg-[#0B1120] border-l border-slate-800 text-slate-100 flex flex-col justify-between h-full p-6 shadow-2xl overflow-y-auto">
-            
-            {/* Cabecera del Panel */}
             <div>
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div className="flex items-center gap-2">
@@ -131,7 +141,6 @@ export default function CatalogView() {
                 </button>
               </div>
 
-              {/* PASO 1: Lista de Productos */}
               {paso === 'carrito' && (
                 <>
                   {cart.length === 0 ? (
@@ -141,11 +150,11 @@ export default function CatalogView() {
                     </div>
                   ) : (
                     <div className="space-y-3 py-4">
-                      {cart.map((item) => (
+                      {cart.map((item: any) => (
                         <div key={item.id} className="bg-[#070C18] border border-slate-800/80 p-4 rounded-xl flex items-center justify-between gap-3">
                           <div className="flex-1">
                             <h4 className="font-bold text-white text-sm">{item.name}</h4>
-                            <p className="text-xs text-amber-400 font-semibold">${item.price.toLocaleString()}</p>
+                            <p className="text-xs text-amber-400 font-semibold">${item.price.toLocaleString('es-CO')}</p>
                           </div>
 
                           <div className="flex items-center gap-2 bg-[#0B1120] p-1 border border-slate-800 rounded-lg">
@@ -180,7 +189,6 @@ export default function CatalogView() {
                 </>
               )}
 
-              {/* PASO 2: Formulario de Información Personal */}
               {paso === 'datos' && (
                 <form id="form-pedidos" onSubmit={handleConfirmarPedidoWhatsApp} className="space-y-4 py-4 text-xs">
                   <div>
@@ -188,6 +196,7 @@ export default function CatalogView() {
                     <input
                       type="text"
                       required
+                      autoComplete="name"
                       value={nombre}
                       onChange={(e) => setNombre(e.target.value)}
                       placeholder="Ej. Daniel Latorre"
@@ -200,6 +209,7 @@ export default function CatalogView() {
                     <input
                       type="tel"
                       required
+                      autoComplete="tel"
                       value={telefono}
                       onChange={(e) => setTelefono(e.target.value)}
                       placeholder="Ej. 3001234567"
@@ -212,6 +222,7 @@ export default function CatalogView() {
                     <input
                       type="text"
                       required
+                      autoComplete="street-address"
                       value={direccion}
                       onChange={(e) => setDireccion(e.target.value)}
                       placeholder="Calle / Carrera, Ciudad"
@@ -222,13 +233,12 @@ export default function CatalogView() {
               )}
             </div>
 
-            {/* Pie del Panel Lateral */}
             {cart.length > 0 && (
               <div className="border-t border-slate-800 pt-4 space-y-4">
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between text-slate-400">
                     <span>Subtotal</span>
-                    <span>${total.toLocaleString()}</span>
+                    <span>${total.toLocaleString('es-CO')}</span>
                   </div>
                   <div className="flex justify-between text-emerald-400 font-semibold">
                     <span>Envío Nacional</span>
@@ -236,36 +246,34 @@ export default function CatalogView() {
                   </div>
                   <div className="flex justify-between items-center text-sm font-bold text-white pt-2 border-t border-slate-800">
                     <span>Total</span>
-                    <span className="text-lg text-amber-400">${total.toLocaleString()}</span>
+                    <span className="text-lg text-amber-400">${total.toLocaleString('es-CO')}</span>
                   </div>
                 </div>
 
-                {/* BOTÓN PASO 1: LLEVA A LLENAR DATOS */}
                 {paso === 'carrito' && (
                   <button
                     type="button"
                     onClick={() => setPaso('datos')}
                     className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg cursor-pointer"
                   >
-                    Proceder al Pago
+                    Continuar con los datos
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
 
-                {/* BOTÓN PASO 2: EN VÍA A WHATSAPP */}
                 {paso === 'datos' && (
                   <button
                     type="submit"
                     form="form-pedidos"
                     disabled={loading}
-                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg cursor-pointer disabled:opacity-50"
+                    className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg cursor-pointer disabled:opacity-50"
                   >
                     <Send className="w-4 h-4" />
-                    {loading ? 'Redirigiendo...' : 'Confirmar Pedido por WhatsApp'}
+                    {loading ? 'Creando pedido...' : 'Confirmar y continuar'}
                   </button>
                 )}
               </div>
             )}
-
           </div>
         </div>
       )}
