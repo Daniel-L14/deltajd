@@ -1,9 +1,16 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/app/context/CartContext';
 
 const inter = Inter({ subsets: ['latin'] });
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  style: ['normal', 'italic'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'DELTA Perfumería | Alta Gama & Esencias Exclusivas',
@@ -16,9 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className="dark">
+    <html lang="es" className={`dark ${playfair.variable}`}>
       <body
-        className={`${inter.className} bg-slate-950 text-slate-100 antialiased min-h-screen selection:bg-amber-500 selection:text-slate-950`}
+        className={`${inter.className} bg-slate-950 text-slate-100 antialiased min-h-screen selection:bg-gold-500 selection:text-slate-950`}
       >
         <CartProvider>
           {children}
