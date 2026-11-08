@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -12,7 +13,8 @@ import {
   Sparkles 
 } from 'lucide-react';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+// 1. Renombramos tu componente original a AdminSidebarContent
+function AdminSidebarContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -93,5 +95,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {children}
       </main>
     </div>
+  );
+}
+
+// 2. Este es el layout que Next.js lee. Envuelve el Sidebar en Suspense.
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense 
+      fallback={
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center text-amber-500">
+          Cargando panel...
+        </div>
+      }
+    >
+      <AdminSidebarContent>{children}</AdminSidebarContent>
+    </Suspense>
   );
 }
