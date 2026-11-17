@@ -6,7 +6,7 @@ import { api } from "@/lib/client-api";
 import type { ItemPedido, Pedido } from "@/lib/pedidos/types";
 import { transitions } from "@/lib/validation";
 import { formatCOP, formatFecha } from "@/lib/format";
-import { updatedOrderWhatsApp } from "@/lib/pedidos/whatsapp";
+import { orderWhatsAppLink, orderWhatsAppMessage, updatedOrderWhatsApp } from "@/lib/pedidos/whatsapp";
 import OrderQuantityEditor from "@/app/components/admin/OrderQuantityEditor";
 interface History {
   id: string;
@@ -108,6 +108,8 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
   const whatsapp = pedido && pendiente && (pedido.items_revision ?? 0) > 0
     ? updatedOrderWhatsApp(pedido)
     : null;
+  const companyMessage = pedido && estado !== "cancelado" ? orderWhatsAppMessage(pedido) : "";
+  const companyChat = companyMessage ? orderWhatsAppLink(companyMessage) : null;
   return (
     <div className="space-y-5">
       <Link href="/admin/pedidos">← Pedidos</Link>
@@ -241,25 +243,43 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
               )}
             </section>
           )}
-          {notice && (
+          {!editing && (companyChat || notice?.configured) && (
             <section className="delta-card space-y-3" aria-labelledby="aviso-whatsapp">
               <h2 id="aviso-whatsapp" className="delta-section-title">
                 Aviso por <em>WhatsApp</em>
               </h2>
-              <p role="status" className="text-sm text-slate-300">
-                {notice.configured
-                  ? noticeLabels[notice.status]
-                  : "WhatsApp Business está pendiente de configurar."}
-              </p>
-              {notice.configured &&
-                pedido.estado?.toLowerCase() !== "cancelado" &&
+              {companyChat && (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-300">
+                    Abre el chat comercial de DELTA con el resumen del pedido preparado.
+                    Revisa el mensaje y pulsa Enviar dentro de WhatsApp.
+                  </p>
+                  {companyChat.useClipboard && (
+                    <label className="block text-sm text-slate-300">
+                      Copia este resumen y pégalo en el chat.
+                      <textarea className="delta-input mt-2 block w-full" readOnly rows={5} value={companyMessage} />
+                    </label>
+                  )}
+                  <a className="delta-secondary inline-flex" href={companyChat.href} target="_blank" rel="noopener noreferrer">
+                    Abrir WhatsApp de DELTA
+                  </a>
+                </div>
+              )}
+              {notice?.configured && (
+                <p role="status" className="border-t border-gold-400/15 pt-3 text-sm text-slate-300">
+                  <strong>Aviso automático</strong> · {noticeLabels[notice.status]}
+                </p>
+              )}
+              {notice?.configured &&
+                estado !== "cancelado" &&
                 (notice.status === "pending" || notice.status === "failed") && (
                   <button
+                    type="button"
                     className="delta-secondary"
-                    disabled={busy || editing}
+                    disabled={busy}
                     onClick={() => void action("whatsapp-aviso", {})}
                   >
-                    {notice.status === "failed" ? "Reintentar aviso" : "Enviar aviso"}
+                    {notice.status === "failed" ? "Reintentar aviso automático" : "Enviar aviso automático"}
                   </button>
                 )}
             </section>
