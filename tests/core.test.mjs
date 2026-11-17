@@ -29,7 +29,7 @@ function load(file, imports = {}) {
   return context.exports;
 }
 const validation = load("lib/validation.ts");
-const { rankProducts } = load("lib/products.ts");
+const { matchingFamilies, rankProducts } = load("lib/products.ts");
 const uuid = "11111111-1111-4111-8111-111111111111";
 const order = {
   cliente_nombre: "Cliente Prueba",
@@ -73,9 +73,12 @@ test("Las redirecciones solo permiten rutas del sitio", () => {
     "/\\evil.test",
     "javascript:alert(1)",
     "/\n/evil.test",
+    "/a/..//evil.test",
+    "/%2e%2e//evil.test",
   ])
     assert.equal(validation.safeNext(s), "/tienda");
   assert.equal(validation.safeNext("/tienda/carrito"), "/tienda/carrito");
+  assert.equal(validation.safeNext("/a/../tienda?orden=1"), "/tienda?orden=1");
 });
 const base = {
   id: uuid,
@@ -118,6 +121,19 @@ test("El recomendador utiliza familia, ocasión y clima; excluye agotados y otro
   assert.equal(second[0].product.id, "b");
   assert.equal(first.length, 2);
   assert.equal(first[0].score, 100);
+});
+test("Los filtros de familias incluyen las agrupaciones del catálogo", () => {
+  assert.deepEqual(Array.from(matchingFamilies("Amaderada")), [
+    "Amaderada",
+    "Orientales & Madera",
+  ]);
+  assert.deepEqual(Array.from(matchingFamilies("Floral")), [
+    "Floral",
+    "Cítricos & Florales",
+  ]);
+  assert.deepEqual(Array.from(matchingFamilies("Extractos Concentrados")), [
+    "Extractos Concentrados",
+  ]);
 });
 test("El recomendador usa precios de productos sin categoría y sus datos registrados", () => {
   const prefs = {

@@ -108,7 +108,7 @@ export function safeNext(value: string | null, fallback = "/tienda"): string {
     return fallback;
   try {
     const u = new URL(value, "https://delta.invalid");
-    return u.origin === "https://delta.invalid"
+    return u.origin === "https://delta.invalid" && !u.pathname.startsWith("//")
       ? u.pathname + u.search + u.hash
       : fallback;
   } catch {

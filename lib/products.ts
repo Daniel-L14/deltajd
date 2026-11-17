@@ -27,6 +27,20 @@ export const FAMILIES = [
   "Extractos Concentrados",
   "Cítricos & Florales",
 ];
+
+export function matchingFamilies(family: string): string[] {
+  switch (family) {
+    case "Amaderada":
+    case "Oriental":
+      return [family, "Orientales & Madera"];
+    case "Cítrica":
+    case "Floral":
+      return [family, "Cítricos & Florales"];
+    default:
+      return [family];
+  }
+}
+
 export interface Preferences {
   budget: string;
   family: string;
@@ -46,12 +60,7 @@ function priceBudget(price: number) {
 }
 
 export function rankProducts(products: Product[], p: Preferences) {
-  const aliases: Record<string, string[]> = {
-    Amaderada: ["Amaderada", "Orientales & Madera"],
-    Oriental: ["Oriental", "Orientales & Madera"],
-    Cítrica: ["Cítrica", "Cítricos & Florales"],
-    Floral: ["Floral", "Cítricos & Florales"],
-  };
+  const families = matchingFamilies(p.family);
   return products
     .filter(
       (product) =>
@@ -69,7 +78,7 @@ export function rankProducts(products: Product[], p: Preferences) {
           ? "El precio está dentro de tu rango de presupuesto"
           : "Coincide con tu categoría de presupuesto",
       ];
-      if ((aliases[p.family] ?? [p.family]).includes(product.family)) {
+      if (families.includes(product.family)) {
         score += 40;
         reasons.push("Coincide con tu familia olfativa");
       }

@@ -42,10 +42,11 @@ export default function Checkout() {
     [phone, setPhone] = useState(""),
     [address, setAddress] = useState(""),
     [error, setError] = useState(""),
+    [inventoryError, setInventoryError] = useState(""),
     [busy, setBusy] = useState(false),
     [account, setAccount] = useState<string | null>(null),
     [checking, setChecking] = useState(true),
-    [prices, setPrices] = useState<Record<string, Product>>({}),
+    [prices, setPrices] = useState<Record<string, Product | null>>({}),
     [loadedSignature, setLoadedSignature] = useState(""),
     [recoveredSignature, setRecoveredSignature] = useState<string | null>(null),
     [priceVersion, setPriceVersion] = useState(0);
@@ -75,19 +76,29 @@ export default function Checkout() {
     let live = true;
     async function load() {
       try {
-        const result = await Promise.all(
-          cart.map((i) => api<{ product: Product }>(`/api/productos/${i.id}`)),
+        const products = await Promise.all(
+          cart.map(async ({ id }) => {
+            try {
+              const { product } = await api<{ product: Product }>(
+                `/api/productos/${id}`,
+              );
+              return [id, product] as const;
+            } catch (error) {
+              if (error instanceof RequestError && error.status === 404)
+                return [id, null] as const;
+              throw error;
+            }
+          }),
         );
         if (live) {
-          setPrices(
-            Object.fromEntries(result.map((x) => [x.product.id, x.product])),
-          );
+          setPrices(Object.fromEntries(products));
           setLoadedSignature(signature);
+          setInventoryError("");
         }
       } catch (e) {
         if (live) {
           setLoadedSignature("");
-          setError((e as Error).message);
+          setInventoryError((e as Error).message);
         }
       }
     }
@@ -128,10 +139,11 @@ export default function Checkout() {
     (s, i) => s + (prices[i.id]?.price ?? i.price) * i.quantity,
     0,
   );
+  const inventoryValid =
+    loadedSignature === signature &&
+    cart.every((i) => (prices[i.id]?.stock ?? 0) >= i.quantity);
   const invalid =
-    recoveredSignature !== `${account}:${signature}` ||
-    loadedSignature !== signature ||
-    cart.some((i) => !prices[i.id] || prices[i.id].stock < i.quantity);
+    recoveredSignature !== `${account}:${signature}` || !inventoryValid;
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting.current || !account || invalid || !cart.length) return;
@@ -206,48 +218,74 @@ export default function Checkout() {
       ) : (
         <>
           <div className="delta-card space-y-4">
-            {cart.map((i) => (
-              <div
-                key={i.id}
-                className="flex flex-wrap items-center justify-between gap-3"
-              >
-                <div>
-                  <p>{i.name}</p>
-                  <p>{formatCOP(prices[i.id]?.price ?? i.price)}</p>
-                  {prices[i.id] && i.quantity > prices[i.id].stock && (
-                    <p className="text-red-300">
-                      Solo quedan {prices[i.id].stock} unidades.
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    disabled={busy}
-                    aria-label={`Restar ${i.name}`}
-                    onClick={() => updateQuantity(i.id, i.quantity - 1)}
-                  >
-                    −
-                  </button>
-                  <span>{i.quantity}</span>
-                  <button
-                    disabled={
-                      busy ||
-                      i.quantity >= 99 ||
-                      i.quantity >= (prices[i.id]?.stock ?? 0)
-                    }
-                    aria-label={`Sumar ${i.name}`}
-                    onClick={() => updateQuantity(i.id, i.quantity + 1)}
-                  >
-                    +
-                  </button>
-                  <button disabled={busy} onClick={() => removeFromCart(i.id)}>
-                    Quitar
-                  </button>
-                </div>
+            {inventoryError && (
+              <div>
+                <p role="alert" className="text-red-300">
+                  {inventoryError}
+                </p>
+                <button
+                  className="delta-secondary"
+                  onClick={() => setPriceVersion((version) => version + 1)}
+                >
+                  Volver a verificar disponibilidad
+                </button>
               </div>
-            ))}
+            )}
+            {cart.map((i) => {
+              const product = prices[i.id];
+              return (
+                <div
+                  key={i.id}
+                  className="flex flex-wrap items-center justify-between gap-3"
+                >
+                  <div>
+                    <p>{i.name}</p>
+                    <p>{formatCOP(product?.price ?? i.price)}</p>
+                    {product === null && (
+                      <p className="text-red-300">
+                        Este perfume ya no está disponible. Quítalo para
+                        continuar.
+                      </p>
+                    )}
+                    {product && i.quantity > product.stock && (
+                      <p className="text-red-300">
+                        Solo quedan {product.stock} unidades.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      disabled={busy}
+                      aria-label={`Restar ${i.name}`}
+                      onClick={() => updateQuantity(i.id, i.quantity - 1)}
+                    >
+                      −
+                    </button>
+                    <span>{i.quantity}</span>
+                    <button
+                      disabled={
+                        busy ||
+                        i.quantity >= 99 ||
+                        i.quantity >= (product?.stock ?? 0)
+                      }
+                      aria-label={`Sumar ${i.name}`}
+                      onClick={() => updateQuantity(i.id, i.quantity + 1)}
+                    >
+                      +
+                    </button>
+                    <button
+                      disabled={busy}
+                      onClick={() => removeFromCart(i.id)}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
             <p className="text-xl text-amber-300">
-              Subtotal: {formatCOP(total)}
+              {inventoryValid ? "Subtotal" : "Subtotal estimado"}:{" "}
+              {formatCOP(total)}
             </p>
             <p className="text-sm text-slate-400">
               El servidor confirma el precio y stock al registrar. La entrega y

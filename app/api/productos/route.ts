@@ -11,7 +11,7 @@ import {
   uuid,
   ApiError,
 } from "@/lib/validation";
-import { PRODUCT_COLUMNS } from "@/lib/products";
+import { matchingFamilies, PRODUCT_COLUMNS } from "@/lib/products";
 export async function GET(request: Request) {
   await connection();
   try {
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       .order("id");
     if (!admin) q = q.eq("is_active", true);
     const family = u.searchParams.get("family");
-    if (family) q = q.eq("family", family.slice(0, 80));
+    if (family) q = q.in("family", matchingFamilies(family.slice(0, 80)));
     const text = searchPattern(u.searchParams.get("q"));
     if (text)
       q = q.or(
