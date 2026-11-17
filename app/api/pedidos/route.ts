@@ -17,7 +17,9 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .order("id");
     const state = params.get("state");
-    if (state && Object.hasOwn(transitions, state))
+    if (state === "nuevo")
+      query = query.in("estado", ["nuevo", "pendiente", "Pendiente"]);
+    else if (state && Object.hasOwn(transitions, state))
       query = query.eq("estado", state);
     const text = searchPattern(params.get("q"));
     if (text)

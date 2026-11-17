@@ -33,6 +33,18 @@ export interface Preferences {
   occasion: string;
   climate: string;
 }
+export const BUDGET_LABELS = {
+  ECONOMICO: "Económico · menos de $50.000",
+  MEDIO: "Medio · $50.000 a menos de $100.000",
+  PREMIUM: "Premium · desde $100.000",
+};
+
+function priceBudget(price: number) {
+  if (price < 50000) return "ECONOMICO";
+  if (price < 100000) return "MEDIO";
+  return "PREMIUM";
+}
+
 export function rankProducts(products: Product[], p: Preferences) {
   const aliases: Record<string, string[]> = {
     Amaderada: ["Amaderada", "Orientales & Madera"],
@@ -41,10 +53,22 @@ export function rankProducts(products: Product[], p: Preferences) {
     Floral: ["Floral", "Cítricos & Florales"],
   };
   return products
-    .filter((x) => x.is_active && x.stock > 0 && x.budget_category === p.budget)
+    .filter(
+      (product) =>
+        product.is_active &&
+        product.stock > 0 &&
+        (product.budget_category === p.budget ||
+          (product.budget_category === "SIN_CLASIFICAR" &&
+            product.price > 0 &&
+            priceBudget(product.price) === p.budget)),
+    )
     .map((product) => {
       let score = 25;
-      const reasons = ["Coincide con tu categoría de presupuesto"];
+      const reasons = [
+        product.budget_category === "SIN_CLASIFICAR"
+          ? "El precio está dentro de tu rango de presupuesto"
+          : "Coincide con tu categoría de presupuesto",
+      ];
       if ((aliases[p.family] ?? [p.family]).includes(product.family)) {
         score += 40;
         reasons.push("Coincide con tu familia olfativa");
@@ -54,7 +78,6 @@ export function rankProducts(products: Product[], p: Preferences) {
         reasons.push("Adecuado según la ocasión registrada");
       }
       if (
-        p.climate === "TODOS" ||
         product.climate_preference === p.climate ||
         product.climate_preference === "TODOS"
       ) {

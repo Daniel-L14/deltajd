@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/client-api";
 import { formatCOP } from "@/lib/format";
-import type { Product, Preferences } from "@/lib/products";
+import { BUDGET_LABELS, type Product, type Preferences } from "@/lib/products";
 type Result = { product: Product; score: number; reasons: string[] };
 export default function Wizard() {
   const [prefs, setPrefs] = useState<Preferences>({
@@ -78,7 +78,11 @@ export default function Wizard() {
               onChange={(e) => setPrefs({ ...prefs, [f.key]: e.target.value })}
             >
               {f.options.map((o) => (
-                <option key={o}>{o}</option>
+                <option key={o} value={o}>
+                  {o in BUDGET_LABELS
+                    ? BUDGET_LABELS[o as keyof typeof BUDGET_LABELS]
+                    : o}
+                </option>
               ))}
             </select>
           </label>

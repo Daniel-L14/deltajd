@@ -27,10 +27,11 @@ export async function GET(request: NextRequest) {
     });
     valid = !error;
   }
-  return NextResponse.redirect(
-    new URL(
-      valid ? safeNext(p.get("next")) : "/auth/auth-code-error",
-      request.url,
-    ),
-  );
+  const destination = valid
+    ? safeNext(p.get("next"))
+    : "/auth/auth-code-error";
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: destination },
+  });
 }

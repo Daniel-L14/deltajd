@@ -22,7 +22,7 @@ export async function POST(r: Request) {
         .select(PRODUCT_COLUMNS)
         .eq("is_active", true)
         .gt("stock", 0)
-        .eq("budget_category", prefs.budget)
+        .in("budget_category", [prefs.budget, "SIN_CLASIFICAR"])
         .order("id")
         .range(start, start + 499);
       if (error) throw error;

@@ -103,7 +103,7 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
               </p>
             ))}
             <div className="flex flex-wrap gap-3">
-              {(transitions[pedido.estado] ?? []).map((estado) => (
+              {(transitions[pedido.estado?.toLowerCase() === "pendiente" ? "nuevo" : pedido.estado] ?? []).map((estado) => (
                 <button
                   className="delta-button"
                   disabled={busy}

@@ -119,6 +119,26 @@ test("El recomendador utiliza familia, ocasión y clima; excluye agotados y otro
   assert.equal(first.length, 2);
   assert.equal(first[0].score, 100);
 });
+test("El recomendador usa precios de productos sin categoría y sus datos registrados", () => {
+  const prefs = {
+    budget: "MEDIO",
+    family: "Amaderada",
+    occasion: "Diario",
+    climate: "TODOS",
+  };
+  const product = {
+    ...base,
+    budget_category: "SIN_CLASIFICAR",
+    price: 50000,
+    occasion: "Sin clasificar",
+    climate_preference: "SIN_CLASIFICAR",
+  };
+  const results = rankProducts([product, { ...product, price: 100000 }], prefs);
+  assert.equal(results.length, 1);
+  assert.equal(results[0].product.price, 50000);
+  assert.equal(results[0].score, 65);
+  assert.match(results[0].reasons[0], /precio/);
+});
 const http = load("lib/http.ts", {
   "server-only": {},
   "next/server": {
@@ -129,6 +149,32 @@ const http = load("lib/http.ts", {
   "./validation": validation,
 });
 test("Valida origen, JSON y tamaño máximo del body", async () => {
+  const forwarded = {
+    Origin: "https://delta.example.test",
+    "X-Forwarded-Host": "delta.example.test",
+    "Content-Type": "application/json",
+  };
+  assert.equal(
+    await http.body(
+      new Request("https://localhost:3000/api", {
+        method: "POST",
+        headers: { ...forwarded, "Sec-Fetch-Site": "same-origin" },
+        body: "true",
+      }),
+    ),
+    true,
+  );
+  await assert.rejects(
+    () =>
+      http.body(
+        new Request("https://localhost:3000/api", {
+          method: "POST",
+          headers: { ...forwarded, "Sec-Fetch-Site": "cross-site" },
+          body: "{}",
+        }),
+      ),
+    { status: 403 },
+  );
   await assert.rejects(() =>
     http.body(
       new Request("http://localhost/api", {

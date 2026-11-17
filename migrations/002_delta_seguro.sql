@@ -7,11 +7,18 @@ DO $$ DECLARE r record; BEGIN
  FOR r IN select table_name,data_type from information_schema.columns where table_schema='public' and column_name='id' and table_name in ('profiles','productos','pedidos','pedido_items','pedido_historial') LOOP
   IF r.data_type<>'uuid' THEN RAISE EXCEPTION 'Migración detenida: %.id no es UUID. Adaptar con el diagnóstico; datos intactos.',r.table_name; END IF;
  END LOOP;
- IF EXISTS(SELECT 1 FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('productos','pedidos','pedido_items','pedido_historial') AND NOT t.tgisinternal) THEN
- RAISE EXCEPTION 'Migración detenida: existen triggers de negocio. Revisar su definición para evitar descontar stock dos veces.';
+ IF EXISTS(
+  SELECT 1 FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+  WHERE n.nspname='public' AND c.relname IN ('productos','pedidos','pedido_items','pedido_historial') AND NOT t.tgisinternal
+  AND NOT (c.relname='pedidos' AND (
+    (t.tgname='trg_pedidos_codigo' AND t.tgtype=7 AND t.tgfoid=coalesce(to_regprocedure('public.set_codigo_pedido()')::oid,0::oid))
+    OR (t.tgname='trg_pedidos_updated' AND t.tgtype=19 AND t.tgfoid=coalesce(to_regprocedure('public.set_updated_at()')::oid,0::oid))
+  ))
+ ) THEN
+ RAISE EXCEPTION 'Migración detenida: hay triggers distintos de los automatismos de código y fecha de DELTA.';
  END IF;
- IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND ((table_name='pedidos' AND column_name='estado' AND data_type NOT IN ('text','character varying')) OR (table_name='pedido_items' AND column_name='subtotal' AND is_generated<>'NEVER'))) THEN
- RAISE EXCEPTION 'Migración detenida: estado enum o subtotal generado requiere adaptación previa.';
+ IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='pedidos' AND column_name='estado' AND data_type NOT IN ('text','character varying')) THEN
+ RAISE EXCEPTION 'Migración detenida: el estado del pedido requiere adaptación previa.';
  END IF;
 END $$;
 CREATE TABLE IF NOT EXISTS public.profiles(id uuid PRIMARY KEY REFERENCES auth.users(id),role text NOT NULL DEFAULT 'CLIENTE');
@@ -67,11 +74,17 @@ ALTER TABLE public.pedido_historial ADD COLUMN IF NOT EXISTS actor_id uuid REFER
 
 -- No se asignan pedidos históricos a usuarios por correo sin verificar la titularidad.
 -- No se inventan fechas de pago de pedidos históricos.
-CREATE UNIQUE INDEX IF NOT EXISTS delta_order_code_idx ON public.pedidos(codigo);
+DO $$ BEGIN
+ IF to_regclass('public.pedidos_codigo_uidx') IS NULL THEN
+  CREATE UNIQUE INDEX IF NOT EXISTS delta_order_code_idx ON public.pedidos(codigo);
+ END IF;
+ IF to_regclass('public.idx_pedido_items_pedido') IS NULL THEN
+  CREATE INDEX IF NOT EXISTS delta_order_items_idx ON public.pedido_items(pedido_id);
+ END IF;
+END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS delta_order_idempotency_idx ON public.pedidos(user_id,idempotency_key);
 CREATE INDEX IF NOT EXISTS delta_order_owner_idx ON public.pedidos(user_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS delta_order_paid_idx ON public.pedidos(paid_at) WHERE paid_at IS NOT NULL;
-CREATE INDEX IF NOT EXISTS delta_order_items_idx ON public.pedido_items(pedido_id);
 CREATE TABLE IF NOT EXISTS public.delta_stock_movements(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), producto_id uuid NOT NULL REFERENCES public.productos(id),
  pedido_id uuid REFERENCES public.pedidos(id),actor_id uuid REFERENCES auth.users(id),
@@ -96,24 +109,60 @@ INSERT INTO public.delta_policy_backup_v2(tablename,policyname,definition)
 DO $$ DECLARE r record; t text; BEGIN
  FOREACH t IN ARRAY ARRAY['profiles','productos','pedidos','pedido_items','pedido_historial','delta_stock_movements','delta_points_ledger','delta_favorites','delta_policy_backup_v2'] LOOP
   EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY',t);
-  FOR r IN SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename=t LOOP EXECUTE format('DROP POLICY %I ON public.%I',r.policyname,t); END LOOP;
-  EXECUTE format('REVOKE ALL ON public.%I FROM PUBLIC,anon,authenticated',t);
-  FOR r IN SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=t LOOP EXECUTE format('REVOKE ALL (%I) ON public.%I FROM PUBLIC,anon,authenticated',r.column_name,t); END LOOP;
   EXECUTE format('GRANT ALL ON public.%I TO service_role',t);
  END LOOP;
- -- Los modelos antiguos quedan conservados, pero sin acceso desde la web.
- FOREACH t IN ARRAY ARRAY['perfumes','inventory'] LOOP
-  IF to_regclass('public.'||t) IS NOT NULL THEN EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY',t);EXECUTE format('REVOKE ALL ON public.%I FROM PUBLIC,anon,authenticated',t);FOR r IN SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=t LOOP EXECUTE format('REVOKE ALL (%I) ON public.%I FROM PUBLIC,anon,authenticated',r.column_name,t);END LOOP;END IF;
+ FOREACH t IN ARRAY ARRAY['profiles','delta_stock_movements','delta_points_ledger','delta_favorites','delta_policy_backup_v2'] LOOP
+  EXECUTE format('REVOKE ALL ON public.%I FROM PUBLIC,anon,authenticated',t);
+  FOR r IN SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=t LOOP
+   EXECUTE format('REVOKE ALL (%I) ON public.%I FROM PUBLIC,anon,authenticated',r.column_name,t);
+  END LOOP;
  END LOOP;
- -- Cerrar las RPC antiguas que permitían saltarse el nuevo flujo.
- FOR r IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('crear_pedido','cambiar_estado_pedido') LOOP
+ FOR r IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('crear_pedido','cambiar_estado_pedido','handle_new_user','sync_catalog_visibility') LOOP
   EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC,anon,authenticated',r.signature);
  END LOOP;
 END $$;
-GRANT SELECT(id,role) ON public.profiles TO authenticated;
-CREATE POLICY delta_profile_read ON public.profiles FOR SELECT TO authenticated USING(id=auth.uid() OR public.delta_is_admin_v2());
+-- Las políticas antiguas del panel consultan el rol. El acceso anónimo a profiles sigue vacío por RLS.
+DROP POLICY IF EXISTS "Perfil propio" ON public.profiles;
+DROP POLICY IF EXISTS delta_profile_read ON public.profiles;
+GRANT SELECT(id,role) ON public.profiles TO anon,authenticated;
+CREATE POLICY delta_profile_read ON public.profiles FOR SELECT TO authenticated USING(id=(SELECT auth.uid()));
+DROP POLICY IF EXISTS "Lectura publica de productos" ON public.productos;
+DROP POLICY IF EXISTS delta_product_read ON public.productos;
 GRANT SELECT(id,name,brand,family,price,stock,description,is_active,image_url,presentation_ml,concentration,notes,budget_category,occasion,climate_preference,created_at) ON public.productos TO anon,authenticated;
-CREATE POLICY delta_product_read ON public.productos FOR SELECT TO anon,authenticated USING(is_active OR public.delta_is_admin_v2());
+CREATE POLICY delta_product_read ON public.productos FOR SELECT TO anon,authenticated USING(is_active OR (SELECT public.delta_is_admin_v2()));
+-- Solo el RPC nuevo cambia el estado de pedidos que reservan inventario.
+REVOKE UPDATE ON public.pedidos FROM PUBLIC,anon,authenticated;
+REVOKE UPDATE(estado,idempotency_key,user_id,stock_reserved,paid_at,request_payload) ON public.pedidos FROM PUBLIC,anon,authenticated;
+GRANT UPDATE(notas_admin,whatsapp_confirmado,whatsapp_confirmado_at) ON public.pedidos TO authenticated;
+DROP POLICY IF EXISTS delta_legacy_order_delete ON public.pedidos;
+CREATE POLICY delta_legacy_order_delete ON public.pedidos AS RESTRICTIVE FOR DELETE TO anon,authenticated USING(idempotency_key IS NULL);
+-- La RPC de la web anterior conserva su firma y solo administra pedidos de esa versión.
+DO $legacy$
+BEGIN
+ IF to_regprocedure('public.cambiar_estado_pedido(uuid,text,text)') IS NOT NULL THEN
+  EXECUTE $definition$
+   CREATE OR REPLACE FUNCTION public.cambiar_estado_pedido(p_pedido_id uuid,p_estado text,p_nota text DEFAULT NULL)
+   RETURNS public.pedidos LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $body$
+   DECLARE v_pedido public.pedidos;
+   BEGIN
+    IF p_estado IS NULL OR p_estado NOT IN ('nuevo','pagado','entregado','cancelado') THEN
+     RAISE EXCEPTION 'Estado inválido: %',p_estado;
+    END IF;
+    UPDATE public.pedidos SET estado=p_estado WHERE id=p_pedido_id AND idempotency_key IS NULL
+    RETURNING * INTO v_pedido;
+    IF NOT FOUND THEN
+     RAISE EXCEPTION 'Pedido no disponible en el flujo anterior: %',p_pedido_id;
+    END IF;
+    INSERT INTO public.pedido_historial(pedido_id,estado,actor,nota) VALUES(p_pedido_id,p_estado,'admin',p_nota);
+    RETURN v_pedido;
+   END
+   $body$
+  $definition$;
+ END IF;
+END $legacy$;
+DROP POLICY IF EXISTS delta_favorites_read ON public.delta_favorites;
+DROP POLICY IF EXISTS delta_favorites_add ON public.delta_favorites;
+DROP POLICY IF EXISTS delta_favorites_remove ON public.delta_favorites;
 GRANT SELECT,INSERT,DELETE ON public.delta_favorites TO authenticated;
 CREATE POLICY delta_favorites_read ON public.delta_favorites FOR SELECT TO authenticated USING(user_id=auth.uid());
 CREATE POLICY delta_favorites_add ON public.delta_favorites FOR INSERT TO authenticated WITH CHECK(user_id=auth.uid() AND EXISTS(SELECT 1 FROM public.productos WHERE id=producto_id AND is_active));
@@ -121,7 +170,10 @@ CREATE POLICY delta_favorites_remove ON public.delta_favorites FOR DELETE TO aut
 
 CREATE OR REPLACE FUNCTION public.delta_crear_pedido_v2(p_user_id uuid,p_email text,p_key uuid,p_payload jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE v_order public.pedidos%ROWTYPE; v_product public.productos%ROWTYPE; it jsonb; qty integer; v_total numeric=0; v_items jsonb='[]'::jsonb; v_id uuid=gen_random_uuid();
+DECLARE
+ v_order public.pedidos%ROWTYPE; v_product public.productos%ROWTYPE; it jsonb; qty integer;
+ v_total numeric=0; v_items jsonb='[]'::jsonb; v_id uuid=gen_random_uuid();
+ v_subtotal_generated boolean;
 BEGIN
  IF p_user_id IS NULL OR p_key IS NULL OR NOT EXISTS(SELECT 1 FROM auth.users WHERE id=p_user_id) THEN RAISE EXCEPTION 'Usuario o clave inválidos'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended(p_user_id::text,0));
@@ -148,9 +200,18 @@ BEGIN
  END IF;
  INSERT INTO public.pedidos(id,codigo,cliente_nombre,cliente_email,cliente_telefono,direccion,total,estado,items,user_id,idempotency_key,request_payload,stock_reserved)
  VALUES(v_id,'DELTA-'||upper(replace(v_id::text,'-','')),p_payload->>'cliente_nombre',p_email,p_payload->>'cliente_telefono',p_payload->>'direccion',v_total,'nuevo',v_items,p_user_id,p_key,p_payload,true) RETURNING * INTO v_order;
+ SELECT a.attgenerated<>'' INTO v_subtotal_generated
+ FROM pg_catalog.pg_attribute a
+ WHERE a.attrelid='public.pedido_items'::regclass AND a.attname='subtotal' AND NOT a.attisdropped;
  FOR it IN SELECT value FROM jsonb_array_elements(v_items) LOOP
   qty=(it->>'cantidad')::integer;
-  INSERT INTO public.pedido_items(id,pedido_id,producto_id,nombre,precio,cantidad,subtotal) VALUES(gen_random_uuid(),v_id,(it->>'producto_id')::uuid,it->>'nombre',(it->>'precio')::numeric,qty,(it->>'subtotal')::numeric);
+  IF v_subtotal_generated THEN
+   INSERT INTO public.pedido_items(id,pedido_id,producto_id,nombre,precio,cantidad)
+   VALUES(gen_random_uuid(),v_id,(it->>'producto_id')::uuid,it->>'nombre',(it->>'precio')::numeric,qty);
+  ELSE
+   INSERT INTO public.pedido_items(id,pedido_id,producto_id,nombre,precio,cantidad,subtotal)
+   VALUES(gen_random_uuid(),v_id,(it->>'producto_id')::uuid,it->>'nombre',(it->>'precio')::numeric,qty,(it->>'subtotal')::numeric);
+  END IF;
   UPDATE public.productos SET stock=stock-qty WHERE id=(it->>'producto_id')::uuid RETURNING * INTO v_product;
   INSERT INTO public.delta_stock_movements(producto_id,pedido_id,actor_id,delta,before_stock,after_stock,reason) VALUES(v_product.id,v_id,p_user_id,-qty,v_product.stock+qty,v_product.stock,'Reserva de pedido');
  END LOOP;
@@ -166,7 +227,7 @@ BEGIN
  SELECT * INTO o FROM public.pedidos WHERE id=p_id FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Pedido no encontrado'; END IF;
  IF o.estado=p_estado THEN RETURN jsonb_build_object('id',o.id,'codigo',o.codigo,'estado',o.estado); END IF;
- IF NOT ((o.estado='nuevo' AND p_estado IN ('pagado','cancelado')) OR (o.estado='pagado' AND p_estado='entregado')) THEN RAISE EXCEPTION 'Transición no permitida. Un pago confirmado requiere un proceso de devolución, no cancelación.'; END IF;
+ IF p_estado IS NULL OR NOT coalesce(((lower(o.estado) IN ('nuevo','pendiente') AND p_estado IN ('pagado','cancelado')) OR (o.estado='pagado' AND p_estado='entregado')),false) THEN RAISE EXCEPTION 'Transición no permitida. Un pago confirmado requiere un proceso de devolución, no cancelación.'; END IF;
  IF p_estado='cancelado' AND o.stock_reserved THEN
   FOR it IN SELECT producto_id,sum(cantidad)::integer AS cantidad FROM public.pedido_items WHERE pedido_id=p_id GROUP BY producto_id ORDER BY producto_id LOOP
    UPDATE public.productos SET stock=stock+it.cantidad WHERE id=it.producto_id RETURNING stock INTO after_qty;
@@ -206,7 +267,7 @@ CREATE OR REPLACE FUNCTION public.delta_resumen_v2() RETURNS jsonb LANGUAGE sql 
  paid AS (SELECT p.* FROM public.pedidos p,bounds b WHERE p.estado IN ('pagado','entregado') AND p.paid_at>=b.month_start),
  top_p AS (SELECT i.producto_id,max(i.nombre) AS nombre,sum(i.cantidad) AS cantidad FROM public.pedido_items i JOIN paid p ON p.id=i.pedido_id GROUP BY i.producto_id ORDER BY sum(i.cantidad) DESC LIMIT 5),
  low AS (SELECT id,name,stock FROM public.productos WHERE is_active AND stock<5 ORDER BY stock LIMIT 10)
- SELECT jsonb_build_object('ventasHoy',coalesce((SELECT sum(total) FROM paid,bounds WHERE paid_at>=day_start),0),'ventasMes',coalesce((SELECT sum(total) FROM paid),0),'ticketPromedio',coalesce((SELECT avg(total) FROM paid),0),'pedidosNuevos',(SELECT count(*) FROM public.pedidos WHERE estado='nuevo'),'pedidosSinConfirmar',(SELECT count(*) FROM public.pedidos WHERE estado='nuevo' AND NOT coalesce(whatsapp_confirmado,false)),'importePendiente',coalesce((SELECT sum(total) FROM public.pedidos WHERE estado='nuevo'),0),'historicosSinFechaPago',(SELECT count(*) FROM public.pedidos WHERE estado IN ('pagado','entregado') AND paid_at IS NULL),'topProductos',coalesce((SELECT jsonb_agg(top_p) FROM top_p),'[]'::jsonb),'stockBajo',coalesce((SELECT jsonb_agg(low) FROM low),'[]'::jsonb));
+ SELECT jsonb_build_object('ventasHoy',coalesce((SELECT sum(total) FROM paid,bounds WHERE paid_at>=day_start),0),'ventasMes',coalesce((SELECT sum(total) FROM paid),0),'ticketPromedio',coalesce((SELECT avg(total) FROM paid),0),'pedidosNuevos',(SELECT count(*) FROM public.pedidos WHERE lower(estado) IN ('nuevo','pendiente')),'pedidosSinConfirmar',(SELECT count(*) FROM public.pedidos WHERE lower(estado) IN ('nuevo','pendiente') AND NOT coalesce(whatsapp_confirmado,false)),'importePendiente',coalesce((SELECT sum(total) FROM public.pedidos WHERE lower(estado) IN ('nuevo','pendiente')),0),'historicosSinFechaPago',(SELECT count(*) FROM public.pedidos WHERE estado IN ('pagado','entregado') AND paid_at IS NULL),'topProductos',coalesce((SELECT jsonb_agg(top_p) FROM top_p),'[]'::jsonb),'stockBajo',coalesce((SELECT jsonb_agg(low) FROM low),'[]'::jsonb));
 $$;
 CREATE OR REPLACE FUNCTION public.delta_member_v2(p_user_id uuid) RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
  SELECT jsonb_build_object('points',coalesce((SELECT sum(points) FROM public.delta_points_ledger WHERE user_id=p_user_id),0),'pedidosCount',(SELECT count(*) FROM public.pedidos WHERE user_id=p_user_id),'ultimoPedido',(SELECT jsonb_build_object('codigo',codigo,'estado',estado,'total',total,'created_at',created_at) FROM public.pedidos WHERE user_id=p_user_id ORDER BY created_at DESC LIMIT 1));

@@ -23,7 +23,18 @@ export function failure(e: unknown) {
 }
 export async function body(request: Request) {
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin)
+  const fetchSite = request.headers.get("sec-fetch-site");
+  const target = new URL(request.url);
+  // Next.js puede usar el host interno en request.url detrás de un proxy.
+  const host =
+    request.headers.get("x-forwarded-host")?.split(",")[0].trim() ||
+    request.headers.get("host") ||
+    target.host;
+  if (
+    fetchSite === "cross-site" ||
+    fetchSite === "same-site" ||
+    (origin && origin !== `${target.protocol}//${host}`)
+  )
     throw new ApiError(403, "Origen no permitido.");
   if (!request.headers.get("content-type")?.includes("application/json"))
     throw new ApiError(415, "Se requiere JSON.");
