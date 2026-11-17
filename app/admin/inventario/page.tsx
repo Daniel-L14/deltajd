@@ -161,7 +161,7 @@ export default function Inventory() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-gold-400/20 pb-5">
-        <h1 className="delta-title">Productos e inventario</h1>
+        <h1 className="delta-title">Productos e <em>inventario</em></h1>
         <Link href="/admin/movimientos" className="delta-secondary">
           Historial de movimientos
         </Link>

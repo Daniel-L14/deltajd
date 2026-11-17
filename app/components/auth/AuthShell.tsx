@@ -14,7 +14,7 @@ import {
 import Image from "next/image";
 
 interface Props {
-  title: string;
+  title: React.ReactNode;
   subtitle: string;
   children: React.ReactNode;
 }
@@ -50,8 +50,8 @@ export default function AuthShell({ title, subtitle, children }: Props) {
             <Image src="/branding/delta-campana.webp" alt="" fill unoptimized className="object-cover" />
           </div>
           <div className="space-y-4 max-w-sm">
-            <h2 className="font-display text-3xl font-semibold text-white leading-tight">
-              Tu cuenta, tu aroma de firma
+            <h2 className="delta-section-title">
+              Tu cuenta, tu <em>aroma de firma</em>
             </h2>
             <ul className="space-y-3">
               {BENEFICIOS.map(({ icon: Icon, text }) => (

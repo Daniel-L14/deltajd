@@ -39,7 +39,7 @@ export default function Movements() {
   return (
     <div className="space-y-5">
       <Link href="/admin/inventario">← Inventario</Link>
-      <h1 className="text-3xl">Movimientos de inventario</h1>
+      <h1 className="delta-title">Movimientos de <em>inventario</em></h1>
       {error && <p role="alert">{error}</p>}
       {rows.map((r) => (
         <article key={r.id} className="delta-card">

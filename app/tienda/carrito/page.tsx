@@ -207,7 +207,7 @@ export default function Checkout() {
     <Navbar />
     <main className="delta-container space-y-6">
       <Link href="/tienda" className="delta-secondary"><ArrowLeft aria-hidden className="size-4" /> Seguir comprando</Link>
-      <h1 className="delta-title">Revisar pedido</h1>
+      <h1 className="delta-title">Revisar <em>pedido</em></h1>
       {storageError && <p role="alert">{storageError}</p>}
       {error && (
         <p role="alert" className="text-red-300">
@@ -369,7 +369,7 @@ export default function Checkout() {
                 disabled={busy || invalid}
                 className="delta-button w-full"
               >
-                {busy ? "Registrando…" : "Crear pedido y coordinar el pago"}
+                {busy ? "Registrando…" : "Confirmar pedido"}
               </button>
               <p className="text-xs text-slate-400">
                 Este paso no realiza un cobro. Puedes consultar tus pedidos para

@@ -36,7 +36,7 @@ export default function MyOrders() {
   return (
     <main className="delta-container space-y-5">
       <Link href="/tienda">← Catálogo</Link>
-      <h1 className="text-3xl">Mis pedidos</h1>
+      <h1 className="delta-title">Mis <em>pedidos</em></h1>
       {error ? (
         <p role="alert">
           {error} <Link href="/login?next=/cuenta/pedidos">Iniciar sesión</Link>

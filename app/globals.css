@@ -256,6 +256,27 @@ body {
     letter-spacing: -.05em;
   }
 
+  .delta-hero-title {
+    color: var(--delta-ivory);
+    font-size: clamp(3rem, 7vw, 7rem);
+    line-height: .92;
+    letter-spacing: -.065em;
+  }
+
+  .delta-section-title {
+    color: var(--delta-ivory);
+    font-size: clamp(1.65rem, 3.75vw, 2.25rem);
+    font-weight: 550;
+    line-height: 1.13;
+    letter-spacing: -.035em;
+  }
+
+  :is(.delta-hero-title, .delta-title, .delta-section-title) em {
+    color: var(--color-gold-300);
+    font-style: italic;
+    font-weight: inherit;
+  }
+
   .delta-eyebrow {
     color: var(--delta-gold);
     font-size: .71rem;

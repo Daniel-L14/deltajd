@@ -57,8 +57,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-2xl font-extrabold text-white">
-          Dashboard General
+        <h1 className="delta-title">
+          Panel <em>general</em>
         </h1>
         <p className="text-xs text-slate-400">
           Resumen operativo y comercial de la perfumería DELTA.

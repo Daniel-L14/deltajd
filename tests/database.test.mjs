@@ -103,6 +103,29 @@ test("Migración, integridad de pedidos, puntos, stock y permisos RLS", async ()
   const order = result.pedido;
   assert.equal(order.total, 100000);
   assert.equal(order.estado, "nuevo");
+  const noticeMigration = fs.readFileSync(
+    new URL("../migrations/005_aviso_pedido_whatsapp.sql", import.meta.url),
+    "utf8",
+  );
+  await db.exec(noticeMigration);
+  await db.exec(noticeMigration);
+  await db.exec("set role service_role");
+  await db.query("insert into delta_order_whatsapp(pedido_id) values ($1)", [order.id]);
+  const { rows: [notice] } = await db.query(
+    "select status, message_id from delta_order_whatsapp where pedido_id=$1", [order.id],
+  );
+  assert.equal(notice.status, "pending");
+  assert.equal(notice.message_id, null);
+  await assert.rejects(
+    () => db.query("insert into delta_order_whatsapp(pedido_id) values ($1)", [order.id]),
+    /duplicate key/,
+  );
+  await db.exec("reset role");
+  for (const role of ["anon", "authenticated"]) {
+    await db.exec(`set role ${role}`);
+    await assert.rejects(() => db.query("select status from delta_order_whatsapp"), /permission denied/);
+    await db.exec("reset role");
+  }
   console.log("PASS authoritative price and initial state");
   await db.query("select delta_crear_pedido_v2($1,$2,$3,$4)", [
     user,

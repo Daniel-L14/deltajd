@@ -55,7 +55,7 @@ export default function Orders() {
   return (
     <div className="space-y-5">
       <div className="flex justify-between">
-        <h1 className="text-3xl">Pedidos</h1>
+        <h1 className="delta-title">Pedidos</h1>
         <button
           className="delta-secondary"
           onClick={() => void load()}

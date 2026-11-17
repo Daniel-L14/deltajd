@@ -241,8 +241,8 @@ export default function HomePage() {
               <p className="delta-eyebrow flex items-center gap-2">
                 <MapPin aria-hidden className="size-4" /> Perfumería en Bogotá
               </p>
-              <h1 className="font-display text-[clamp(3rem,7vw,7rem)] leading-[.92] tracking-[-.065em] text-slate-100">
-                El arte de la <em className="text-gold-300">alta perfumería</em>
+              <h1 className="delta-hero-title">
+                El arte de la <em>alta perfumería</em>
               </h1>
               <p className="max-w-md text-base leading-7 text-slate-300 sm:text-lg">
                 Descubre fragancias para el día a día, ocasiones especiales y
@@ -302,8 +302,8 @@ export default function HomePage() {
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-400/30 bg-gold-500/10 px-3 py-1 text-xs font-semibold text-gold-300">
                   <Crown className="w-3.5 h-3.5" /> Club DELTA
                 </span>
-                <h2 className="font-display text-3xl sm:text-4xl font-semibold text-white leading-tight">
-                  Crea tu cuenta y haz que cada pedido cuente
+                <h2 className="delta-section-title">
+                  Crea tu cuenta y haz que <em>cada pedido cuente</em>
                 </h2>
                 <p className="text-sm text-slate-300 leading-relaxed max-w-md">
                   Es gratis. Al iniciar sesión acumulas puntos con cada compra,
@@ -381,8 +381,8 @@ export default function HomePage() {
         <section className="px-6 pt-20 max-w-6xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div className="space-y-2">
-              <h2 className="font-display text-3xl sm:text-4xl font-semibold text-white">
-                Fragancias destacadas
+              <h2 className="delta-section-title">
+                Fragancias <em>destacadas</em>
               </h2>
               <p className="text-sm text-slate-400 max-w-md">
                 Explora una selección del catálogo y consulta sus notas, precios y disponibilidad.
@@ -482,8 +482,8 @@ export default function HomePage() {
         <section className="px-6 pt-20 max-w-6xl mx-auto w-full">
           <div className="relative overflow-hidden rounded-3xl border border-gold-400/15 bg-gradient-to-r from-wine-900 via-wine-950 to-slate-950 p-8 sm:p-12 grid gap-10 md:grid-cols-2 items-center">
             <div className="space-y-4">
-              <h2 className="font-display text-3xl sm:text-4xl font-semibold text-white leading-tight">
-                ¿No sabes cuál elegir?
+              <h2 className="delta-section-title">
+                ¿No sabes <em>cuál elegir</em>?
               </h2>
               <p className="text-sm text-slate-300 leading-relaxed max-w-md">
                 Responde cuatro preguntas rápidas y te mostramos las fragancias
@@ -513,8 +513,8 @@ export default function HomePage() {
 
         {/* ---------- Por qué DELTA ---------- */}
         <section className="px-6 py-20 max-w-6xl mx-auto w-full">
-          <h2 className="font-display text-3xl sm:text-4xl font-semibold text-white mb-10 max-w-xl">
-            Perfumería de autor, con atención de boutique
+          <h2 className="delta-section-title mb-10 max-w-xl">
+            Perfumería de autor, con <em>atención de boutique</em>
           </h2>
           <div className="grid gap-10 md:grid-cols-3 md:divide-x md:divide-gold-400/10">
             {[

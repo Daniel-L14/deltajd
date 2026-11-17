@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { json, failure } from "@/lib/http";
+import { whatsappBusinessConfig } from "@/lib/pedidos/whatsapp-business";
 export async function GET(
   _r: Request,
   { params }: { params: Promise<{ codigo: string }> },
@@ -24,7 +25,24 @@ export async function GET(
       .eq("pedido_id", pedido.id)
       .order("creado_at");
     if (he) throw he;
-    return json({ pedido, historial });
+    const configured = Boolean(whatsappBusinessConfig());
+    const notice = configured
+      ? await db
+          .from("delta_order_whatsapp")
+          .select("status")
+          .eq("pedido_id", pedido.id)
+          .maybeSingle()
+      : null;
+    return json({
+      pedido,
+      historial,
+      whatsappAviso: {
+        configured,
+        status: notice?.error
+          ? "unavailable"
+          : (notice?.data?.status ?? "pending"),
+      },
+    });
   } catch (e) {
     return failure(e);
   }

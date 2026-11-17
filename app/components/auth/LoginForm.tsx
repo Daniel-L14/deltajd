@@ -77,7 +77,7 @@ export default function LoginForm() {
 
   return (
     <AuthShell
-      title="Bienvenido de vuelta"
+      title={<>Bienvenido <em>de vuelta</em></>}
       subtitle="Inicia sesión para ver tus puntos, favoritos y pedidos."
     >
       {error && (

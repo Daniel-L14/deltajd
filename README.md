@@ -35,3 +35,32 @@ node --env-file=.env.local scripts/configurar-fotos.mjs
 El bucket sirve las fotos del catálogo. Las escrituras pasan por la
 autorización de administrador de DELTA. Las credenciales se mantienen en el
 entorno del servidor.
+
+## Avisos de pedidos por WhatsApp
+
+Al confirmar un pedido, DELTA guarda el pedido y dispara un aviso automático
+desde WhatsApp Business si el entorno tiene configurado el remitente y la
+plantilla. El aviso incluye el código, el total y un PDF con los datos del
+pedido. El cliente también puede enviar el resumen desde la página de
+confirmación para coordinar el pago.
+
+1. Aplica `migrations/005_aviso_pedido_whatsapp.sql` en el Supabase de DELTA.
+2. En Meta, registra un número remitente para la API de WhatsApp Business.
+   Usa otro número para recibir los pedidos. Configúralo con el indicativo
+   internacional en `NEXT_PUBLIC_WHATSAPP_PHONE`.
+3. Crea una plantilla de utilidad con encabezado de documento PDF y dos
+   variables posicionales en el cuerpo. Por ejemplo, «DELTA registró el
+   pedido {{1}} por {{2}}. Consulta el detalle adjunto para preparar la entrega».
+4. Cuando Meta apruebe la plantilla, configura las variables
+   `WHATSAPP_*` de `.env.example` en Codespaces o en el alojamiento.
+   Usa el ID del teléfono remitente, el nombre e idioma aprobados, la
+   versión vigente de Graph API y un token con permiso
+   `whatsapp_business_messaging`. Guarda el token como secreto del servidor.
+5. Reinicia el servidor. Si cambias el número receptor, vuelve a compilar
+   el sitio para actualizar también el enlace que ve el cliente.
+
+**Administración → Pedidos → Detalle → Aviso por WhatsApp** muestra el
+resultado del envío. Si Meta aceptó el mensaje, DELTA conserva su identificador
+para evitar reenviarlo. Si el resultado queda por verificar, revisa el chat
+de la empresa. Cuando el aviso falla de forma explícita, puedes reintentarlo
+desde el detalle del pedido.

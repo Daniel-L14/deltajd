@@ -13,7 +13,7 @@ export async function GET(
     const { data, error } = await createAdminClient()
       .from("pedidos")
       .select(
-        "id,codigo,cliente_nombre,cliente_telefono,direccion,total,estado,items,created_at",
+        "id,codigo,cliente_nombre,cliente_telefono,cliente_email,direccion,total,estado,items,created_at",
       )
       .eq("user_id", user.id)
       .eq("codigo", codigo)

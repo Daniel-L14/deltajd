@@ -1,8 +1,12 @@
-import { connection } from "next/server";
+import { after, connection } from "next/server";
 import { requireUser, requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { body, json, failure } from "@/lib/http";
 import { parseOrder, uuid, searchPattern, transitions } from "@/lib/validation";
+import { notifyOrderOnWhatsApp } from "@/lib/pedidos/whatsapp-business";
+
+export const maxDuration = 40;
+
 export async function GET(request: Request) {
   await connection();
   try {
@@ -77,6 +81,15 @@ export async function POST(request: Request) {
     if (error) {
       if (error.code === "P0001") return json({ error: error.message }, 409);
       throw error;
+    }
+    if (data.estado === "nuevo") {
+      after(async () => {
+        try {
+          await notifyOrderOnWhatsApp(data);
+        } catch {
+          console.error("DELTA: no se pudo procesar el aviso de WhatsApp.");
+        }
+      });
     }
     return json(
       {

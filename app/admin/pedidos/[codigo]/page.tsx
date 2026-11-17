@@ -13,21 +13,42 @@ interface History {
   creado_at: string;
   actor_id: string | null;
 }
+
+const noticeLabels = {
+  pending: "Pendiente de enviar",
+  sending: "Envío en curso. Si el estado persiste, revisa el chat de la empresa.",
+  accepted: "Aceptado por WhatsApp",
+  failed: "Falló el envío. Puedes volver a intentarlo.",
+  unknown: "Entrega por verificar en el chat de la empresa.",
+  unavailable: "El estado del envío no está disponible en este momento.",
+};
+
+type OrderDetails = {
+  pedido: Pedido;
+  historial: History[];
+  whatsappAviso: {
+    configured: boolean;
+    status: keyof typeof noticeLabels;
+  };
+};
+
 function Content({ params }: { params: Promise<{ codigo: string }> }) {
   const { codigo } = use(params),
     [pedido, setPedido] = useState<Pedido | null>(null),
     [history, setHistory] = useState<History[]>([]),
+    [notice, setNotice] = useState<OrderDetails["whatsappAviso"] | null>(null),
     [nota, setNota] = useState(""),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
   const load = useCallback(async () => {
     try {
-      const d = await api<{ pedido: Pedido; historial: History[] }>(
+      const d = await api<OrderDetails>(
         `/api/admin/pedidos/${encodeURIComponent(codigo)}`,
       );
       setPedido(d.pedido);
       setHistory(d.historial);
+      setNotice(d.whatsappAviso);
       setNota(d.pedido.notas_admin ?? "");
     } catch (e) {
       setError((e as Error).message);
@@ -35,13 +56,14 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
   }, [codigo]);
   useEffect(() => {
     let live = true;
-    api<{ pedido: Pedido; historial: History[] }>(
+    api<OrderDetails>(
       `/api/admin/pedidos/${encodeURIComponent(codigo)}`,
     )
       .then((d) => {
         if (live) {
           setPedido(d.pedido);
           setHistory(d.historial);
+          setNotice(d.whatsappAviso);
           setNota(d.pedido.notas_admin ?? "");
         }
       })
@@ -62,7 +84,7 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
         method: "PATCH",
         body: JSON.stringify(data),
       });
-      setMessage("Cambio guardado.");
+      if (suffix !== "whatsapp-aviso") setMessage("Cambio guardado.");
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -88,7 +110,8 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
       ) : (
         <>
           <div className="delta-card space-y-3">
-            <h1 className="text-2xl break-all">{pedido.codigo}</h1>
+            <h1 className="delta-title">Detalle del <em>pedido</em></h1>
+            <p className="break-all font-mono text-sm">{pedido.codigo}</p>
             <p>
               {pedido.cliente_nombre} · {pedido.cliente_email}
             </p>
@@ -143,6 +166,29 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
               conciliación.
             </p>
           </div>
+          {notice && (
+            <section className="delta-card space-y-3" aria-labelledby="aviso-whatsapp">
+              <h2 id="aviso-whatsapp" className="delta-section-title">
+                Aviso por <em>WhatsApp</em>
+              </h2>
+              <p role="status" className="text-sm text-slate-300">
+                {notice.configured
+                  ? noticeLabels[notice.status]
+                  : "WhatsApp Business está pendiente de configurar."}
+              </p>
+              {notice.configured &&
+                pedido.estado?.toLowerCase() !== "cancelado" &&
+                (notice.status === "pending" || notice.status === "failed") && (
+                  <button
+                    className="delta-secondary"
+                    disabled={busy}
+                    onClick={() => void action("whatsapp-aviso", {})}
+                  >
+                    {notice.status === "failed" ? "Reintentar aviso" : "Enviar aviso"}
+                  </button>
+                )}
+            </section>
+          )}
           <form
             className="delta-card space-y-3"
             onSubmit={(e) => {
@@ -164,7 +210,7 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
             </button>
           </form>
           <section className="delta-card space-y-3">
-            <h2>Historial de estados</h2>
+            <h2 className="delta-section-title">Historial de <em>estados</em></h2>
             {history.map((h) => (
               <p key={h.id}>
                 {formatFecha(h.creado_at)} · {h.estado} · {h.nota}{" "}

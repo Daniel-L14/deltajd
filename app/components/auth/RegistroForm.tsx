@@ -87,7 +87,7 @@ export default function RegistroForm() {
 
   return (
     <AuthShell
-      title="Únete al Club DELTA"
+      title={<>Únete al <em>Club DELTA</em></>}
       subtitle="Crea tu cuenta gratis y acumula puntos en cada pedido."
     >
       {error && (

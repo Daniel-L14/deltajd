@@ -8,7 +8,7 @@ export default function Recover() {
     [busy, setBusy] = useState(false);
   return (
     <main className="delta-container max-w-lg">
-      <h1 className="text-2xl mb-5">Recuperar contraseña</h1>
+      <h1 className="delta-title mb-5">Recuperar <em>contraseña</em></h1>
       <form
         className="delta-card space-y-4"
         onSubmit={async (e) => {

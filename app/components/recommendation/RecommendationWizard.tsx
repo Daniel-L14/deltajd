@@ -46,7 +46,7 @@ export default function Wizard() {
       <div className="grid items-start gap-6 lg:grid-cols-[.9fr_1.1fr] lg:gap-10">
         <header className="space-y-4 pt-2 lg:pt-7">
           <Compass aria-hidden className="size-8 stroke-[1.4] text-gold-300" />
-          <h1 className="delta-title max-w-md">Encuentra tu fragancia</h1>
+          <h1 className="delta-title max-w-md">Encuentra tu <em>fragancia</em></h1>
           <p className="max-w-md text-slate-300">
             Elige tu presupuesto, tu familia olfativa y el momento en que usarás
             la fragancia. Te mostraremos opciones disponibles del catálogo.
@@ -117,7 +117,7 @@ export default function Wizard() {
       )}
       {!!results?.length && (
         <section className="space-y-4 border-t border-gold-400/20 pt-6" aria-labelledby="recomendaciones">
-          <h2 id="recomendaciones" className="text-3xl">Tu selección</h2>
+          <h2 id="recomendaciones" className="delta-section-title">Tu <em>selección</em></h2>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {results.map(({ product, score, reasons }) => (
             <article

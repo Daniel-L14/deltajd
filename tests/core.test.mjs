@@ -4,7 +4,8 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import path from "node:path";
-function load(file, imports = {}) {
+import { PageSizes, PDFDocument, StandardFonts, rgb } from "pdf-lib";
+function load(file, imports = {}, globals = {}) {
   const source = fs.readFileSync(path.resolve(file), "utf8");
   const code = ts.transpileModule(source, {
     compilerOptions: {
@@ -24,6 +25,7 @@ function load(file, imports = {}) {
     TextDecoder,
     Uint8Array,
     console,
+    ...globals,
   };
   vm.runInNewContext(code, context);
   return context.exports;
@@ -39,6 +41,119 @@ const order = {
   estado: "pagado",
   total: 1,
 };
+const formats = load("lib/format.ts");
+const whatsapp = load("lib/pedidos/whatsapp.ts", { "../format": formats });
+const savedOrder = {
+  ...order,
+  id: uuid,
+  codigo: "DELTA-PRUEBA",
+  cliente_nombre: "Lucía Mejía",
+  cliente_email: "lucia@example.test",
+  direccion: "Calle 42 & Carrera 10\nBogotá",
+  total: 220000,
+  items: [
+    { nombre: "Cedro & Ámbar", cantidad: 2, precio: 90000 },
+    { nombre: "Rosa", cantidad: 1, precio: 40000 },
+  ],
+};
+
+test("El detalle de WhatsApp incluye datos del pedido, cantidades y precios registrados", () => {
+  assert.equal(whatsapp.whatsappPhone("+57 (300) 123-4567"), "573001234567");
+  assert.equal(whatsapp.whatsappPhone("https://wa.me/573001234567"), null);
+  assert.equal(whatsapp.whatsappPhone("573001234567 extensión 123"), null);
+  const message = whatsapp.orderWhatsAppMessage(savedOrder);
+  for (const detail of [
+    "DELTA-PRUEBA", "Lucía Mejía", "lucia@example.test", "3001234567",
+    "Calle 42 & Carrera 10 Bogotá", "2 × Cedro & Ámbar", "1 × Rosa",
+    formats.formatCOP(90000), formats.formatCOP(180000), formats.formatCOP(220000),
+  ]) assert.ok(message.includes(detail), detail);
+});
+
+test("El aviso adjunta el pedido completo y evita reenviar después de la aceptación de Meta", async () => {
+  let status = "pending";
+  let messageId;
+  let calls = 0;
+  const { notifyOrderOnWhatsApp } = load("lib/pedidos/whatsapp-business.ts", {
+    "server-only": {},
+    "pdf-lib": { PageSizes, PDFDocument, StandardFonts, rgb },
+    "../format": formats,
+    "./whatsapp": whatsapp,
+    "../supabase/admin": {
+      createAdminClient: () => ({
+        from: (table) => {
+          assert.equal(table, "delta_order_whatsapp");
+          return {
+            upsert: async () => ({}),
+            update: (data) => ({
+              eq: (_column, id) => {
+                assert.equal(id, uuid);
+                if (data.status !== "sending") {
+                  status = data.status;
+                  messageId = data.message_id;
+                  return Promise.resolve({});
+                }
+                return {
+                  in: (_field, allowed) => ({
+                    select: () => ({
+                      maybeSingle: async () => {
+                        if (!allowed.includes(status)) return { data: null };
+                        status = data.status;
+                        return { data: { pedido_id: id } };
+                      },
+                    }),
+                  }),
+                };
+              },
+            }),
+          };
+        },
+      }),
+    },
+  }, {
+    process: { env: {
+      WHATSAPP_ACCESS_TOKEN: "test",
+      WHATSAPP_PHONE_NUMBER_ID: "123456",
+      WHATSAPP_TEMPLATE_NAME: "delta_pedido_recibido",
+      WHATSAPP_TEMPLATE_LANGUAGE: "es_CO",
+      WHATSAPP_GRAPH_VERSION: "v24.0",
+      NEXT_PUBLIC_WHATSAPP_PHONE: "573001234567",
+    } },
+    Blob, FormData, AbortSignal,
+    fetch: async (url, init) => {
+      calls += 1;
+      assert.equal(init.headers.Authorization, "Bearer test");
+      if (url.endsWith("/media")) {
+        assert.equal(init.body.get("type"), "application/pdf");
+        const file = init.body.get("file");
+        assert.equal(file.type, "application/pdf");
+        const pdf = await PDFDocument.load(await file.arrayBuffer());
+        assert.ok(pdf.getPageCount() > 1);
+        return Response.json({ id: "document-id" });
+      }
+      assert.equal(url, "https://graph.facebook.com/v24.0/123456/messages");
+      const payload = JSON.parse(init.body);
+      assert.equal(payload.to, "573001234567");
+      assert.equal(payload.template.name, "delta_pedido_recibido");
+      assert.equal(payload.template.components[0].parameters[0].document.id, "document-id");
+      assert.equal(payload.template.components[1].parameters[0].text, savedOrder.codigo);
+      return Response.json({ messages: [{ id: "wamid.test" }] });
+    },
+  });
+  const largeOrder = {
+    ...savedOrder,
+    items: Array.from({ length: 50 }, (_, i) => ({
+      ...savedOrder.items[0], nombre: `Perfume número ${i + 1} de la colección DELTA`,
+    })),
+  };
+  const outcomes = await Promise.all([
+    notifyOrderOnWhatsApp(largeOrder),
+    notifyOrderOnWhatsApp(largeOrder),
+  ]);
+  assert.deepEqual(outcomes.sort(), ["accepted", "already_attempted"]);
+  assert.equal(await notifyOrderOnWhatsApp(largeOrder), "already_attempted");
+  assert.equal(calls, 2);
+  assert.equal(messageId, "wamid.test");
+});
 test("El contrato descarta precios y estados enviados por el cliente", () => {
   const parsed = validation.parseOrder(order);
   assert.equal(parsed.estado, undefined);
@@ -234,6 +349,7 @@ test("No existen las antiguas rutas PUT y DELETE de pedidos", () => {
     "@/lib/supabase/admin": {},
     "@/lib/http": http,
     "@/lib/validation": validation,
+    "@/lib/pedidos/whatsapp-business": {},
   });
   assert.equal(route.PUT, undefined);
   assert.equal(route.DELETE, undefined);
@@ -254,6 +370,7 @@ test("POST sin sesión devuelve 401 sin tocar base administrativa", async () => 
     },
     "@/lib/http": http,
     "@/lib/validation": validation,
+    "@/lib/pedidos/whatsapp-business": {},
   });
   const result = await route.POST(
     new Request("http://localhost/api/pedidos", { method: "POST", body: "{}" }),
@@ -262,9 +379,9 @@ test("POST sin sesión devuelve 401 sin tocar base administrativa", async () => 
   assert.equal(calls, 0);
 });
 test("POST autenticado envía contrato seguro y clave idempotente a SQL", async () => {
-  let params;
+  let params, deferred, notified;
   const route = load("app/api/pedidos/route.ts", {
-    "next/server": { connection: async () => {} },
+    "next/server": { after: (callback) => { deferred = callback; } },
     "@/lib/auth": {
       requireUser: async () => ({
         user: { id: uuid, email: "cliente@example.test" },
@@ -283,6 +400,7 @@ test("POST autenticado envía contrato seguro y clave idempotente a SQL", async 
     },
     "@/lib/http": http,
     "@/lib/validation": validation,
+    "@/lib/pedidos/whatsapp-business": { notifyOrderOnWhatsApp: async (record) => { notified = record; } },
   });
   const result = await route.POST(
     new Request("http://localhost/api/pedidos", {
@@ -295,4 +413,7 @@ test("POST autenticado envía contrato seguro y clave idempotente a SQL", async 
   assert.equal(params.p_user_id, uuid);
   assert.equal(params.p_payload.estado, undefined);
   assert.equal(params.p_payload.items[0].precio, undefined);
+  assert.equal(notified, undefined);
+  await deferred();
+  assert.equal(notified.codigo, "demo");
 });

@@ -58,8 +58,8 @@ export default function NosotrosPage() {
         <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
           Nuestra Esencia
         </span>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-          TRADICIÓN Y <span className="text-amber-400">TECNOLOGÍA</span>
+        <h1 className="delta-title">
+          Tradición y <em>tecnología</em>
         </h1>
         <p className="text-slate-400 text-sm max-w-xl mx-auto leading-relaxed">
           Conoce la historia detrás de la marca que revoluciona el arte de la
@@ -70,9 +70,8 @@ export default function NosotrosPage() {
       {/* Sección Historia de la Marca */}
       <section className="px-6 py-12 max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-white">
-            El Origen de{" "}
-            <span className="text-amber-400">DELTA Perfumería</span>
+          <h2 className="delta-section-title">
+            El origen de <em>DELTA Perfumería</em>
           </h2>
           <p className="text-xs text-slate-400 leading-relaxed">
             DELTA reúne un catálogo de fragancias y herramientas para ayudarte a
@@ -145,8 +144,8 @@ export default function NosotrosPage() {
       {/* Ubicación y Horarios */}
       <section className="px-6 py-16 max-w-6xl mx-auto w-full space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-white">
-            Visita Nuestra Boutique
+          <h2 className="delta-section-title">
+            Visita nuestra <em>boutique</em>
           </h2>
           <p className="text-xs text-slate-400">
             Consulta disponibilidad y condiciones de entrega con la tienda.

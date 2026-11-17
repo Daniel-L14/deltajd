@@ -56,7 +56,7 @@ export default function Store() {
       <main className="delta-container space-y-6">
         <section className="grid items-end gap-5 border-b border-gold-400/20 pb-7 pt-3 sm:grid-cols-[1fr_auto] sm:pt-8">
           <div className="space-y-3">
-            <h1 className="delta-title">Catálogo DELTA</h1>
+            <h1 className="delta-title">Catálogo <em>DELTA</em></h1>
             <p className="max-w-lg text-slate-300">
               Explora las familias olfativas y consulta el precio y la disponibilidad de cada perfume.
             </p>

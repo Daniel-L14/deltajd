@@ -9,7 +9,7 @@ export default function Reset() {
     router = useRouter();
   return (
     <main className="delta-container max-w-lg">
-      <h1 className="text-2xl mb-5">Nueva contraseña</h1>
+      <h1 className="delta-title mb-5">Nueva <em>contraseña</em></h1>
       <form
         className="delta-card space-y-4"
         onSubmit={async (e) => {
