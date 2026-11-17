@@ -33,7 +33,9 @@ export async function body(request: Request) {
   if (
     fetchSite === "cross-site" ||
     fetchSite === "same-site" ||
-    (origin && origin !== `${target.protocol}//${host}`)
+    (fetchSite !== "same-origin" &&
+      origin &&
+      origin !== `${target.protocol}//${host}`)
   )
     throw new ApiError(403, "Origen no permitido.");
   if (!request.headers.get("content-type")?.includes("application/json"))

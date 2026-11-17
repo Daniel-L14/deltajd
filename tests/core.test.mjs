@@ -158,7 +158,21 @@ test("Valida origen, JSON y tamaño máximo del body", async () => {
     await http.body(
       new Request("https://localhost:3000/api", {
         method: "POST",
-        headers: { ...forwarded, "Sec-Fetch-Site": "same-origin" },
+        headers: {
+          ...forwarded,
+          "X-Forwarded-Host": "localhost:3000",
+          "Sec-Fetch-Site": "same-origin",
+        },
+        body: "true",
+      }),
+    ),
+    true,
+  );
+  assert.equal(
+    await http.body(
+      new Request("https://localhost:3000/api", {
+        method: "POST",
+        headers: forwarded,
         body: "true",
       }),
     ),
