@@ -58,15 +58,26 @@ const savedOrder = {
 };
 
 test("El detalle de WhatsApp incluye datos del pedido, cantidades y precios registrados", () => {
-  assert.equal(whatsapp.whatsappPhone("+57 (300) 123-4567"), "573001234567");
-  assert.equal(whatsapp.whatsappPhone("https://wa.me/573001234567"), null);
-  assert.equal(whatsapp.whatsappPhone("573001234567 extensión 123"), null);
   const message = whatsapp.orderWhatsAppMessage(savedOrder);
   for (const detail of [
     "DELTA-PRUEBA", "Lucía Mejía", "lucia@example.test", "3001234567",
     "Calle 42 & Carrera 10 Bogotá", "2 × Cedro & Ámbar", "1 × Rosa",
     formats.formatCOP(90000), formats.formatCOP(180000), formats.formatCOP(220000),
   ]) assert.ok(message.includes(detail), detail);
+});
+
+test("El botón de WhatsApp apunta al número de DELTA y conserva el mensaje completo", () => {
+  const message = whatsapp.orderWhatsAppMessage(savedOrder);
+  const { href, useClipboard } = whatsapp.orderWhatsAppLink(message);
+  const url = new URL(href);
+  assert.equal(url.origin, "https://wa.me");
+  assert.equal(url.pathname, "/573142352488");
+  assert.equal(url.searchParams.get("text"), message);
+  assert.equal(useClipboard, false);
+
+  const large = whatsapp.orderWhatsAppLink(message.repeat(50));
+  assert.equal(large.href, "https://wa.me/573142352488");
+  assert.equal(large.useClipboard, true);
 });
 
 test("El aviso adjunta el pedido completo y evita reenviar después de la aceptación de Meta", async () => {
@@ -132,7 +143,7 @@ test("El aviso adjunta el pedido completo y evita reenviar después de la acepta
       }
       assert.equal(url, "https://graph.facebook.com/v24.0/123456/messages");
       const payload = JSON.parse(init.body);
-      assert.equal(payload.to, "573001234567");
+      assert.equal(payload.to, "573142352488");
       assert.equal(payload.template.name, "delta_pedido_recibido");
       assert.equal(payload.template.components[0].parameters[0].document.id, "document-id");
       assert.equal(payload.template.components[1].parameters[0].text, savedOrder.codigo);

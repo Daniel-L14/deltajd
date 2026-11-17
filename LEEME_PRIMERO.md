@@ -106,14 +106,13 @@ En CMD puedes usar `copy .env.example .env.local`. Abre `.env.local` y reemplaza
 NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICA
 SUPABASE_SERVICE_ROLE_KEY=TU_CLAVE_SERVICE_ROLE_SOLO_SERVIDOR
-NEXT_PUBLIC_WHATSAPP_PHONE=TU_NUMERO_CON_INDICATIVO_SIN_SIGNO_MAS
 ```
 
 También se admite `NEXT_PUBLIC_SUPABASE_ANON_KEY` como alternativa a la publishable. No necesitas definir ambas.
 
 La clave service role **nunca** debe llevar prefijo `NEXT_PUBLIC_`, aparecer en componentes cliente ni subirse a GitHub. Reinicia el servidor después de editar variables. Al desplegar, configura las mismas variables en el hosting y vuelve a compilar.
 
-Configura el número comercial verificado de DELTA en `.env.local`, con indicativo y solo dígitos.
+El botón de pedidos usa el número de DELTA, +57 314 235 2488. Se configura en `lib/pedidos/whatsapp.ts`.
 
 ## 8. Confirmación y recuperación de correo
 

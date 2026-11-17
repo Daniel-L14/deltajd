@@ -2,10 +2,14 @@
 import { Suspense } from "react";
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { formatCOP } from "@/lib/format";
 import { ESTADO_LABEL, type Pedido } from "@/lib/pedidos/types";
-import { orderWhatsAppMessage, whatsappPhone } from "@/lib/pedidos/whatsapp";
+import {
+  orderWhatsAppLink,
+  orderWhatsAppMessage,
+} from "@/lib/pedidos/whatsapp";
 import Navbar from "@/app/components/layout/Navbar";
 
 function Content({ params }: { params: Promise<{ codigo: string }> }) {
@@ -26,12 +30,10 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
       live = false;
     };
   }, [codigo]);
-  const phone = whatsappPhone(process.env.NEXT_PUBLIC_WHATSAPP_PHONE);
   const message = pedido
-    ? `Hola, DELTA. Quiero coordinar el pago de este pedido.\n\n${orderWhatsAppMessage(pedido)}`
+    ? `Hola, DELTA. Les comparto mi pedido para coordinar el pago y la entrega.\n\n${orderWhatsAppMessage(pedido)}`
     : "";
-  const text = encodeURIComponent(message);
-  const useClipboard = text.length > 6000;
+  const { href, useClipboard } = orderWhatsAppLink(message);
 
   return (
     <div className="delta-frame min-h-screen">
@@ -86,57 +88,55 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
             <p className="text-sm text-slate-400">
               La tienda confirmará cuando reciba tu pago.
             </p>
-            {phone ? (
-              <div className="space-y-3 border-t border-gold-400/15 pt-5">
-                <a
-                  className="delta-button"
-                  href={`https://wa.me/${phone}${useClipboard ? "" : `?text=${text}`}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Coordinar pago por WhatsApp
-                </a>
-                <p className="text-sm text-slate-300">
-                  {useClipboard
-                    ? "Copia el detalle, pégalo en el chat de DELTA y pulsa Enviar."
-                    : "Revisa el detalle del pedido y pulsa Enviar en WhatsApp."}
-                </p>
-                {useClipboard && (
-                  <div className="space-y-2">
-                    <label className="block">
-                      Mensaje del pedido
-                      <textarea
-                        className="delta-input block w-full"
-                        value={message}
-                        readOnly
-                        rows={6}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className="delta-secondary"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(message);
-                          setCopied("Detalle copiado.");
-                        } catch {
-                          setCopied(
-                            "Selecciona el texto del mensaje para copiarlo.",
-                          );
-                        }
-                      }}
-                    >
-                      Copiar detalle
-                    </button>
-                    <p role="status" className="text-sm">
-                      {copied}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p>Contacta a la tienda indicando tu código de pedido.</p>
-            )}
+            <div className="space-y-3 border-t border-gold-400/15 pt-5">
+              <a
+                className="delta-button w-full sm:w-auto"
+                href={href}
+                aria-describedby="enviar-pedido-ayuda"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle aria-hidden className="size-4" />
+                Enviar pedido por WhatsApp
+              </a>
+              <p id="enviar-pedido-ayuda" className="text-sm text-slate-300">
+                {useClipboard
+                  ? "Por la longitud del pedido, copia el detalle, pégalo en el chat de DELTA y pulsa Enviar."
+                  : "Se abrirá el chat de DELTA con el pedido listo. Pulsa Enviar en WhatsApp."}
+              </p>
+              {useClipboard && (
+                <div className="space-y-2">
+                  <label className="block">
+                    Mensaje del pedido
+                    <textarea
+                      className="delta-input block w-full"
+                      value={message}
+                      readOnly
+                      rows={6}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="delta-secondary"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(message);
+                        setCopied("Detalle copiado.");
+                      } catch {
+                        setCopied(
+                          "Selecciona el texto del mensaje para copiarlo.",
+                        );
+                      }
+                    }}
+                  >
+                    Copiar detalle
+                  </button>
+                  <p role="status" className="text-sm">
+                    {copied}
+                  </p>
+                </div>
+              )}
+            </div>
           </section>
         )}
       </main>

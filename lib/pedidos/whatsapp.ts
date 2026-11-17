@@ -1,15 +1,10 @@
 import { formatCOP } from "../format";
 import type { Pedido } from "./types";
 
+export const companyWhatsAppPhone = "573142352488";
+
 function oneLine(value: string | null | undefined) {
   return value?.replace(/\s+/g, " ").trim() ?? "";
-}
-
-export function whatsappPhone(value: string | undefined) {
-  const raw = value?.trim() ?? "";
-  if (!/^\+?[\d\s().-]+$/.test(raw)) return null;
-  const digits = raw.replace(/\D/g, "").replace(/^00/, "");
-  return /^[1-9]\d{9,14}$/.test(digits) ? digits : null;
 }
 
 export function orderWhatsAppMessage(pedido: Pedido) {
@@ -31,4 +26,11 @@ export function orderWhatsAppMessage(pedido: Pedido) {
     "",
     `Total de productos: ${formatCOP(pedido.total)} COP`,
   ].join("\n");
+}
+
+export function orderWhatsAppLink(message: string) {
+  const text = encodeURIComponent(message);
+  const useClipboard = text.length > 6000;
+  const chat = `https://wa.me/${companyWhatsAppPhone}`;
+  return { href: useClipboard ? chat : `${chat}?text=${text}`, useClipboard };
 }

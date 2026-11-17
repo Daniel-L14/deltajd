@@ -36,18 +36,23 @@ El bucket sirve las fotos del catálogo. Las escrituras pasan por la
 autorización de administrador de DELTA. Las credenciales se mantienen en el
 entorno del servidor.
 
-## Avisos de pedidos por WhatsApp
+## Pedidos por WhatsApp
 
-Al confirmar un pedido, DELTA guarda el pedido y dispara un aviso automático
+Después de confirmar, el cliente pulsa **Enviar pedido por WhatsApp**.
+Se abre el chat de DELTA en el **+57 314 235 2488** con el mensaje
+preparado. El cliente pulsa **Enviar** dentro de WhatsApp. El número
+comercial se configura en `lib/pedidos/whatsapp.ts`.
+
+### Aviso automático opcional
+
+Al confirmar un pedido, DELTA puede disparar un aviso automático
 desde WhatsApp Business si el entorno tiene configurado el remitente y la
 plantilla. El aviso incluye el código, el total y un PDF con los datos del
-pedido. El cliente también puede enviar el resumen desde la página de
-confirmación para coordinar el pago.
+pedido.
 
 1. Aplica `migrations/005_aviso_pedido_whatsapp.sql` en el Supabase de DELTA.
 2. En Meta, registra un número remitente para la API de WhatsApp Business.
-   Usa otro número para recibir los pedidos. Configúralo con el indicativo
-   internacional en `NEXT_PUBLIC_WHATSAPP_PHONE`.
+   Usa un remitente diferente del número comercial que recibe los pedidos.
 3. Crea una plantilla de utilidad con encabezado de documento PDF y dos
    variables posicionales en el cuerpo. Por ejemplo, «DELTA registró el
    pedido {{1}} por {{2}}. Consulta el detalle adjunto para preparar la entrega».
@@ -56,8 +61,7 @@ confirmación para coordinar el pago.
    Usa el ID del teléfono remitente, el nombre e idioma aprobados, la
    versión vigente de Graph API y un token con permiso
    `whatsapp_business_messaging`. Guarda el token como secreto del servidor.
-5. Reinicia el servidor. Si cambias el número receptor, vuelve a compilar
-   el sitio para actualizar también el enlace que ve el cliente.
+5. Reinicia el servidor para cargar las variables.
 
 **Administración → Pedidos → Detalle → Aviso por WhatsApp** muestra el
 resultado del envío. Si Meta aceptó el mensaje, DELTA conserva su identificador

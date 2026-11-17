@@ -3,7 +3,7 @@ import { PageSizes, PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { formatCOP } from "../format";
 import { createAdminClient } from "../supabase/admin";
 import type { Pedido } from "./types";
-import { orderWhatsAppMessage, whatsappPhone } from "./whatsapp";
+import { companyWhatsAppPhone, orderWhatsAppMessage } from "./whatsapp";
 
 export function whatsappBusinessConfig() {
   const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
@@ -11,10 +11,8 @@ export function whatsappBusinessConfig() {
   const template = process.env.WHATSAPP_TEMPLATE_NAME?.trim() ?? "";
   const language = process.env.WHATSAPP_TEMPLATE_LANGUAGE?.trim() ?? "";
   const version = process.env.WHATSAPP_GRAPH_VERSION?.trim() ?? "";
-  const recipient = whatsappPhone(process.env.NEXT_PUBLIC_WHATSAPP_PHONE);
   if (
     !token ||
-    !recipient ||
     !/^\d+$/.test(sender) ||
     !/^[a-z0-9_]+$/.test(template) ||
     !/^[a-z]{2}(_[A-Z]{2})?$/.test(language) ||
@@ -24,7 +22,7 @@ export function whatsappBusinessConfig() {
   }
   return {
     token,
-    recipient,
+    recipient: companyWhatsAppPhone,
     template,
     language,
     endpoint: `https://graph.facebook.com/${version}/${sender}`,

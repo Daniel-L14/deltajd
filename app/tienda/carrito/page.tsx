@@ -372,8 +372,8 @@ export default function Checkout() {
                 {busy ? "Registrando…" : "Confirmar pedido"}
               </button>
               <p className="text-xs text-slate-400">
-                Este paso no realiza un cobro. Puedes consultar tus pedidos para
-                comprobar el registro si pierdes la conexión.
+                Después de confirmar, podrás enviar tu pedido por WhatsApp para
+                coordinar el pago y la entrega.
               </p>
               <Link href="/cuenta/pedidos">Ver mis pedidos</Link>
             </form>
