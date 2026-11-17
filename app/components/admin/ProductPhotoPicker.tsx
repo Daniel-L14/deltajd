@@ -40,19 +40,19 @@ export default function ProductPhotoPicker({ name, current, file, disabled, onCh
   }
 
   return (
-    <section aria-labelledby={`${id}-title`} className="space-y-4 rounded-3xl border border-amber-400/15 bg-gradient-to-br from-amber-400/5 to-slate-950 p-5">
+    <section aria-labelledby={`${id}-title`} className="space-y-4 rounded-xl border border-amber-400/20 bg-slate-950 p-4 sm:p-5">
       <div className="flex items-center gap-3">
         <ImagePlus aria-hidden className="size-5 text-amber-300" />
-        <h3 id={`${id}-title`} className="text-lg font-semibold text-slate-50">Fotografía del perfume</h3>
+        <h3 id={`${id}-title`} className="text-xl text-slate-100">Fotografía del perfume</h3>
       </div>
       <ProductPhoto src={file ? preview : current} name={name || "Vista previa del perfume"} className="aspect-[4/3] w-full" />
       <label
         onDragOver={(event) => { event.preventDefault(); if (!disabled) setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(event) => { event.preventDefault(); setDragging(false); select(event.dataTransfer.files); }}
-        className={`flex min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-3 py-5 text-center text-sm transition-colors focus-within:outline-2 focus-within:outline-amber-300 ${disabled ? "opacity-60" : "cursor-pointer"} ${dragging ? "border-amber-300 bg-amber-400/15" : "border-amber-400/35 hover:bg-amber-400/10"}`}
+        className={`flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border bg-amber-400/5 border-dashed px-3 py-5 text-center text-sm transition-colors focus-within:outline-2 focus-within:outline-amber-300 ${disabled ? "opacity-60" : "cursor-pointer"} ${dragging ? "border-amber-300 bg-amber-400/15" : "border-amber-400/35 hover:bg-amber-400/10"}`}
       >
-        <UploadCloud aria-hidden className="size-6 text-amber-300" />
+        <span aria-hidden className="grid size-10 place-items-center rounded-full border border-gold-400/25 bg-gold-400/10"><UploadCloud className="size-5 text-gold-300" /></span>
         <span className="font-medium">{file ? "Elegir otra foto" : "Arrastra o selecciona una foto"}</span>
         <span id={`${id}-help`} className="text-xs text-slate-400">JPG, PNG o WebP · Máximo 4 MB</span>
         <input

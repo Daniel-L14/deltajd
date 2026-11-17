@@ -181,3 +181,160 @@ body {
  .delta-button { @apply bg-amber-500 text-slate-950 rounded-xl px-4 py-3 font-bold hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed; }
  .delta-secondary { @apply border border-slate-600 rounded-xl px-3 py-2 hover:bg-slate-800 disabled:opacity-40; }
 }
+
+/* Identidad visual compartida por la tienda y el panel. */
+:root {
+  --delta-ink: #110f10;
+  --delta-surface: #1a1617;
+  --delta-ivory: #f7eee2;
+  --delta-muted: #bdb0aa;
+  --delta-line: rgb(220 181 126 / 20%);
+  --delta-gold: #e6c389;
+}
+
+@theme inline {
+  --color-slate-950: #110f10;
+  --color-slate-900: #1a1617;
+  --color-slate-800: #2c2425;
+  --color-slate-700: #44383a;
+  --color-slate-600: #655558;
+  --color-slate-500: #a79693;
+  --color-slate-400: #c0b2ac;
+  --color-slate-300: #d6c8bf;
+  --color-slate-200: #e8ded3;
+  --color-slate-100: #f7eee2;
+}
+
+@layer base {
+  body {
+    color: var(--delta-ivory);
+    line-height: 1.65;
+    font-variant-numeric: lining-nums;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+  button, select { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  label { font-size: 0.875rem; font-weight: 550; }
+
+  ::selection { background: var(--delta-gold); color: var(--delta-ink); }
+}
+
+@layer components {
+  .delta-frame {
+    background:
+      radial-gradient(ellipse at 75% -28%, rgb(120 66 47 / 22%), transparent 68%),
+      var(--delta-ink);
+  }
+
+  .delta-nav {
+    background: rgb(17 15 16 / 94%);
+    border-bottom: 1px solid var(--delta-line);
+    backdrop-filter: blur(16px);
+  }
+
+  .delta-wordmark {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    letter-spacing: .25em;
+    line-height: 1;
+    color: var(--delta-ivory);
+  }
+
+  .delta-title {
+    color: var(--delta-ivory);
+    font-size: clamp(2.25rem, 5vw, 4.25rem);
+    font-weight: 500;
+    line-height: 1.01;
+    letter-spacing: -.05em;
+  }
+
+  .delta-eyebrow {
+    color: var(--delta-gold);
+    font-size: .71rem;
+    font-weight: 650;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+  }
+
+  .delta-card {
+    background: linear-gradient(145deg, #211a1a, #181517 85%);
+    border: 1px solid var(--delta-line);
+    border-radius: 1.25rem;
+    box-shadow: 0 16px 36px rgb(0 0 0 / 12%);
+  }
+
+  .delta-input {
+    min-height: 3rem;
+    border-radius: .6rem;
+    border-color: rgb(220 181 126 / 23%);
+    color: var(--delta-ivory);
+    font: inherit;
+    font-size: 1rem;
+    transition: border-color 150ms ease, background 150ms ease;
+  }
+
+  .delta-input:focus { border-color: var(--delta-gold); }
+  .delta-input::placeholder { color: var(--delta-muted); opacity: .75; }
+
+  .delta-button, .delta-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    min-height: 2.75rem;
+    border-radius: .62rem;
+    font-size: .875rem;
+    font-weight: 650;
+    line-height: 1.2;
+    text-align: center;
+    transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .delta-button {
+    padding-inline: 1.125rem;
+    background: #e6c389;
+    color: #1b1413;
+    box-shadow: 0 8px 20px rgb(135 92 40 / 19%);
+  }
+
+  .delta-button:hover:not(:disabled) { background: #f0d4a5; }
+  .delta-secondary { padding-inline: .9rem; border-color: var(--delta-line); color: var(--delta-ivory); }
+  .delta-secondary:hover:not(:disabled) { border-color: #997c57; background: #2a2121; }
+
+  .delta-campaign {
+    background: radial-gradient(ellipse at 88% 0%, #39211d, transparent 70%), #100e0f;
+    border-bottom: 1px solid var(--delta-line);
+  }
+
+  .delta-product-card {
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 1.1rem;
+    border: 1px solid var(--delta-line);
+    background: linear-gradient(155deg, #211a1a, #151213 80%);
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .delta-product-card:hover {
+    border-color: rgb(230 195 137 / 48%);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 20%);
+  }
+
+  .delta-photo-surface {
+    background: radial-gradient(ellipse at 55% 36%, #3b2925, #1d1819 53%, #151213);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delta-button, .delta-secondary, .delta-product-card, .delta-input {
+    transition: none;
+  }
+}

@@ -11,7 +11,7 @@ import {
   Package,
   Sparkles,
 } from "lucide-react";
-import HeroBottle from "@/app/components/home/HeroBottle";
+import Image from "next/image";
 
 interface Props {
   title: string;
@@ -46,7 +46,9 @@ export default function AuthShell({ title, subtitle, children }: Props) {
         </Link>
 
         <div className="relative flex flex-col items-center gap-8">
-          <HeroBottle className="w-64 h-auto" />
+          <div className="relative aspect-[3/2] w-full max-w-lg overflow-hidden rounded-2xl border border-gold-400/20">
+            <Image src="/branding/delta-campana.webp" alt="" fill unoptimized className="object-cover" />
+          </div>
           <div className="space-y-4 max-w-sm">
             <h2 className="font-display text-3xl font-semibold text-white leading-tight">
               Tu cuenta, tu aroma de firma
@@ -90,12 +92,12 @@ export default function AuthShell({ title, subtitle, children }: Props) {
           </Link>
         </div>
 
-        <div className="w-full max-w-md space-y-7">
+        <div className="delta-card w-full max-w-md space-y-7">
           <div className="space-y-2">
             <div className="lg:hidden inline-flex p-3 rounded-2xl border border-gold-400/30 bg-gold-500/10 text-gold-400">
               <Sparkles className="w-6 h-6" />
             </div>
-            <h1 className="font-display text-4xl font-semibold text-white">
+            <h1 className="delta-title">
               {title}
             </h1>
             <p className="text-sm text-slate-400">{subtitle}</p>

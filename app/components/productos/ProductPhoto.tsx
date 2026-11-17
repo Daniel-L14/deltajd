@@ -13,7 +13,7 @@ export default function ProductPhoto({ src, name, className = "", compact = fals
   const [failed, setFailed] = useState<string>();
   const showImage = src && src !== failed && /^(https:\/\/|blob:)/i.test(src);
   return (
-    <div className={`relative isolate overflow-hidden rounded-2xl border border-amber-400/15 bg-slate-950 ${className}`}>
+    <div className={`relative isolate overflow-hidden rounded-2xl border border-amber-400/15 delta-photo-surface ${className}`}>
       {showImage ? (
         <Image
           fill
@@ -24,9 +24,9 @@ export default function ProductPhoto({ src, name, className = "", compact = fals
           className="object-contain"
         />
       ) : (
-        <div className="absolute inset-0 grid place-content-center justify-items-center gap-2 bg-gradient-to-br from-amber-400/10 via-slate-950 to-slate-900 text-amber-200/65">
-          <ImageIcon aria-hidden className={compact ? "size-4" : "size-8"} />
-          {!compact && <span className="text-xs">Foto pendiente</span>}
+        <div className="absolute inset-0 grid place-content-center justify-items-center gap-2 text-gold-300/80">
+          <ImageIcon aria-hidden className={compact ? "size-4" : "size-7 stroke-[1.25]"} />
+          {!compact && <span className="text-xs tracking-wide">Foto pendiente</span>}
         </div>
       )}
     </div>

@@ -160,8 +160,8 @@ export default function Inventory() {
   }
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-between gap-4">
-        <h1 className="text-3xl">Productos e inventario</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-gold-400/20 pb-5">
+        <h1 className="delta-title">Productos e inventario</h1>
         <Link href="/admin/movimientos" className="delta-secondary">
           Historial de movimientos
         </Link>
@@ -179,9 +179,9 @@ export default function Inventory() {
       <form
         id="product-form"
         onSubmit={save}
-        className="delta-card grid gap-6 xl:grid-cols-[minmax(240px,1fr)_minmax(0,2fr)]"
+        className="delta-card grid items-start gap-6 xl:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]"
       >
-        <h2 className="text-2xl font-semibold xl:col-span-2">
+        <h2 className="border-b border-gold-400/15 pb-4 text-3xl xl:col-span-2">
           {editing ? "Editar producto" : "Crear producto"}
         </h2>
         <ProductPhotoPicker
@@ -194,133 +194,133 @@ export default function Inventory() {
           onPublish={editing ? () => void publishPhoto() : undefined}
         />
         <fieldset disabled={busy} className="grid min-w-0 content-start gap-4 sm:grid-cols-2">
-        {(
-          [
-            "name",
-            "brand",
-            "description",
-            "notes",
-            "concentration",
-          ] as const
-        ).map((key, i) => (
-          <label key={key}>
-            {
-              [
-                "Nombre",
-                "Marca",
-                "Descripción",
-                "Notas olfativas",
-                "Concentración",
-              ][i]
-            }
-            <input
-              className="delta-input"
-              value={form[key]}
-              required={key === "name" || key === "brand"}
-              maxLength={
-                key === "description" ? 2000 : 500
+          {(
+            [
+              "name",
+              "brand",
+              "description",
+              "notes",
+              "concentration",
+            ] as const
+          ).map((key, i) => (
+            <label key={key} className="min-w-0">
+              {
+                [
+                  "Nombre",
+                  "Marca",
+                  "Descripción",
+                  "Notas olfativas",
+                  "Concentración",
+                ][i]
               }
-              onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-            />
-          </label>
-        ))}
-        {(["price", "stock"] as const).map((key) => (
-          <label key={key}>
-            {key === "price" ? "Precio (COP)" : "Stock disponible"}
+              <input
+                className="delta-input"
+                value={form[key]}
+                required={key === "name" || key === "brand"}
+                maxLength={
+                  key === "description" ? 2000 : 500
+                }
+                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+              />
+            </label>
+          ))}
+          {(["price", "stock"] as const).map((key) => (
+            <label key={key} className="min-w-0">
+              {key === "price" ? "Precio (COP)" : "Stock disponible"}
+              <input
+                className="delta-input"
+                type="number"
+                min={key === "price" ? 1 : 0}
+                max={key === "price" ? 100000000 : 100000}
+                step="1"
+                required
+                value={form[key]}
+                onChange={(e) =>
+                  setForm({ ...form, [key]: Number(e.target.value) })
+                }
+              />
+            </label>
+          ))}
+          <label>
+            Presentación (ml)
             <input
               className="delta-input"
               type="number"
-              min={key === "price" ? 1 : 0}
-              max={key === "price" ? 100000000 : 100000}
-              step="1"
-              required
-              value={form[key]}
+              min="1"
+              max="5000"
+              value={form.presentation_ml ?? ""}
               onChange={(e) =>
-                setForm({ ...form, [key]: Number(e.target.value) })
+                setForm({
+                  ...form,
+                  presentation_ml: e.target.value ? Number(e.target.value) : null,
+                })
               }
             />
           </label>
-        ))}
-        <label>
-          Presentación (ml)
-          <input
-            className="delta-input"
-            type="number"
-            min="1"
-            max="5000"
-            value={form.presentation_ml ?? ""}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                presentation_ml: e.target.value ? Number(e.target.value) : null,
-              })
-            }
-          />
-        </label>
-        {(
-          [
-            { key: "family", label: "Familia", options: FAMILIES },
-            {
-              key: "budget_category",
-              label: "Categoría de presupuesto",
-              options: ["ECONOMICO", "MEDIO", "PREMIUM"],
-            },
-            {
-              key: "occasion",
-              label: "Ocasión",
-              options: ["Diario", "Trabajo", "Noche / Evento", "Todas"],
-            },
-            {
-              key: "climate_preference",
-              label: "Clima",
-              options: ["CALIDO", "FRIO", "TODOS"],
-            },
-          ] as const
-        ).map((f) => (
-          <label key={f.key}>
-            {f.label}
-            <select
+          {(
+            [
+              { key: "family", label: "Familia", options: FAMILIES },
+              {
+                key: "budget_category",
+                label: "Categoría de presupuesto",
+                options: ["ECONOMICO", "MEDIO", "PREMIUM"],
+              },
+              {
+                key: "occasion",
+                label: "Ocasión",
+                options: ["Diario", "Trabajo", "Noche / Evento", "Todas"],
+              },
+              {
+                key: "climate_preference",
+                label: "Clima",
+                options: ["CALIDO", "FRIO", "TODOS"],
+              },
+            ] as const
+          ).map((f) => (
+            <label key={f.key}>
+              {f.label}
+              <select
+                className="delta-input"
+                value={form[f.key]}
+                onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+              >
+                {!(f.options as readonly string[]).includes(form[f.key]) && (
+                  <option value={form[f.key]}>Reclasificar: {form[f.key]}</option>
+                )}
+                {f.options.map((o) => (
+                  <option key={o}>{o}</option>
+                ))}
+              </select>
+            </label>
+          ))}
+          <label className="sm:col-span-2">
+            Motivo del registro o ajuste
+            <input
               className="delta-input"
-              value={form[f.key]}
-              onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-            >
-              {!(f.options as readonly string[]).includes(form[f.key]) && (
-                <option value={form[f.key]}>Reclasificar: {form[f.key]}</option>
-              )}
-              {f.options.map((o) => (
-                <option key={o}>{o}</option>
-              ))}
-            </select>
+              required
+              minLength={3}
+              maxLength={300}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Compra a proveedor, conteo físico, corrección…"
+            />
           </label>
-        ))}
-        <label className="sm:col-span-2">
-          Motivo del registro o ajuste
-          <input
-            className="delta-input"
-            required
-            minLength={3}
-            maxLength={300}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Compra a proveedor, conteo físico, corrección…"
-          />
-        </label>
-        <button className="delta-button" disabled={busy}>
-          {busy ? "Guardando…" : "Guardar producto"}
-        </button>
-        {editing && (
-          <button
-            type="button"
-            className="delta-secondary"
-            onClick={() => {
-              setEditing(null);
-              setForm(empty);
-              setPhoto(null);
-            }}
-          >
-            Cancelar edición
+          <button className="delta-button" disabled={busy}>
+            {busy ? "Guardando…" : "Guardar producto"}
           </button>
-        )}
+          {editing && (
+            <button
+              type="button"
+              className="delta-secondary"
+              onClick={() => {
+                setEditing(null);
+                setForm(empty);
+                setPhoto(null);
+              }}
+            >
+              Cancelar edición
+            </button>
+          )}
         </fieldset>
       </form>
       <label className="block">
@@ -347,15 +347,15 @@ export default function Inventory() {
               <div className="flex items-center gap-4">
                 <ProductPhoto src={p.image_url} name={p.name} compact className="size-16 shrink-0" />
                 <div>
-                <h3 className="font-bold">
-                  {p.name} {!p.is_active && "(Archivado)"}
-                </h3>
-                <p>
-                  {formatCOP(p.price)} · Stock disponible: {p.stock}
-                </p>
-                <p className="text-sm text-slate-400">
-                  {p.family} · {p.budget_category}
-                </p>
+                  <h3 className="font-bold">
+                    {p.name} {!p.is_active && "(Archivado)"}
+                  </h3>
+                  <p>
+                    {formatCOP(p.price)} · Stock disponible: {p.stock}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    {p.family} · {p.budget_category}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">

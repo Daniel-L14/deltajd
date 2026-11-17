@@ -3,6 +3,7 @@ import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Heart, Search, ShoppingBag } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { type Product, FAMILIES } from "@/lib/products";
 import { formatCOP } from "@/lib/format";
@@ -50,50 +51,46 @@ export default function Store() {
     };
   }, [query]);
   return (
-    <>
+    <div className="delta-frame min-h-screen">
       <Navbar />
       <main className="delta-container space-y-6">
-        <div className="flex flex-wrap justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Catálogo DELTA</h1>
-            <p className="text-slate-400">
-              Precios en pesos colombianos. Confirma disponibilidad y entrega al
-              comprar.
+        <section className="grid items-end gap-5 border-b border-gold-400/20 pb-7 pt-3 sm:grid-cols-[1fr_auto] sm:pt-8">
+          <div className="space-y-3">
+            <h1 className="delta-title">Catálogo DELTA</h1>
+            <p className="max-w-lg text-slate-300">
+              Explora las familias olfativas y consulta el precio y la disponibilidad de cada perfume.
             </p>
           </div>
-          <Link className="delta-button" href="/tienda/carrito">
-            Carrito ({cart.reduce((s, x) => s + x.quantity, 0)})
+          <Link className="delta-secondary w-fit" href="/tienda/carrito">
+            <ShoppingBag aria-hidden className="size-4" /> Mi carrito ({cart.reduce((sum, item) => sum + item.quantity, 0)})
           </Link>
+        </section>
+        <div className="delta-card grid gap-4 sm:grid-cols-[2fr_1fr]">
+          <label className="block min-w-0">
+            Buscar en el catálogo
+            <span className="relative block">
+              <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-gold-300" />
+              <input
+                className="delta-input pl-10"
+                value={search}
+                maxLength={100}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+                placeholder="Nombre, marca o notas"
+              />
+            </span>
+          </label>
+          <label className="block min-w-0">
+            Familia olfativa
+            <select
+              className="delta-input"
+              value={family}
+              onChange={(event) => { setFamily(event.target.value); setPage(1); }}
+            >
+              <option value="">Todas las familias</option>
+              {FAMILIES.map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </label>
         </div>
-        <label className="block">
-          Buscar en el catálogo
-          <input
-            className="delta-input"
-            value={search}
-            maxLength={100}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Nombre, marca, familia o notas"
-          />
-        </label>
-        <label className="block">
-          Familia olfativa
-          <select
-            className="delta-input"
-            value={family}
-            onChange={(e) => {
-              setFamily(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">Todas las familias</option>
-            {FAMILIES.map((value) => (
-              <option key={value}>{value}</option>
-            ))}
-          </select>
-        </label>
         {error && (
           <p role="alert" className="text-red-300">
             {error}
@@ -114,19 +111,22 @@ export default function Store() {
               const quantity =
                 cart.find((i) => i.id === product.id)?.quantity ?? 0;
               return (
-                <article key={product.id} className="delta-card space-y-3">
-                  <ProductPhoto src={product.image_url} name={product.name} className="aspect-[4/3] w-full" />
-                  <p className="text-sm text-slate-400">
+                <article key={product.id} className="delta-product-card flex flex-col">
+                  <Link href={`/tienda/producto/${product.id}`} aria-label={`Ver ${product.name}`}>
+                    <ProductPhoto src={product.image_url} name={product.name} className="aspect-[4/3] w-full rounded-none border-0" />
+                  </Link>
+                  <div className="flex flex-1 flex-col gap-3 p-5">
+                  <p className="delta-eyebrow">
                     {product.brand} · {product.family}
                   </p>
                   <Link
                     href={`/tienda/producto/${product.id}`}
-                    className="text-xl font-bold block"
+                    className="block font-display text-2xl leading-tight text-slate-100 hover:text-gold-300"
                   >
                     {product.name}
                   </Link>
-                  <p className="line-clamp-2 text-sm">{product.description}</p>
-                  <p className="text-amber-300 font-bold">
+                  <p className="line-clamp-2 text-sm leading-6 text-slate-300">{product.description}</p>
+                  <p className="mt-auto pt-2 text-lg font-semibold text-gold-300">
                     {formatCOP(product.price)}
                   </p>
                   <p className="text-sm">
@@ -156,21 +156,23 @@ export default function Store() {
                     </button>
                     <button
                       className="delta-secondary"
-                      aria-label={`Guardar ${product.name} en favoritos`}
+                      aria-label={member.isFav(product.id) ? `Quitar ${product.name} de favoritos` : `Guardar ${product.name} en favoritos`}
+                      aria-pressed={member.isFav(product.id)}
                       onClick={() => {
                         if (!member.user) router.push("/login?next=/tienda");
                         else void member.toggleFav(product);
                       }}
                     >
-                      {member.isFav(product.id) ? "♥" : "♡"}
+                      <Heart aria-hidden className={`size-4 ${member.isFav(product.id) ? "fill-gold-300 text-gold-300" : ""}`} />
                     </button>
+                  </div>
                   </div>
                 </article>
               );
             })}
           </div>
         )}
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between gap-3 border-t border-gold-400/20 pt-5 text-sm text-slate-300">
           <button
             className="delta-secondary"
             disabled={page === 1 || loading}
@@ -190,6 +192,6 @@ export default function Store() {
           </button>
         </div>
       </main>
-    </>
+    </div>
   );
 }

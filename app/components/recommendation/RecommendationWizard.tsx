@@ -2,10 +2,18 @@
 import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { useState } from "react";
 import Link from "next/link";
+import { ArrowUpRight, Compass } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { formatCOP } from "@/lib/format";
 import { BUDGET_LABELS, type Product, type Preferences } from "@/lib/products";
 type Result = { product: Product; score: number; reasons: string[] };
+
+const optionsLabels: Record<string, string> = {
+  ...BUDGET_LABELS,
+  CALIDO: "Cálido",
+  FRIO: "Frío",
+  TODOS: "Cualquier clima",
+};
 export default function Wizard() {
   const [prefs, setPrefs] = useState<Preferences>({
       budget: "ECONOMICO",
@@ -34,13 +42,17 @@ export default function Wizard() {
     }
   }
   return (
-    <section className="delta-card w-full max-w-3xl space-y-6">
-      <h1 className="text-3xl">Encuentra tu fragancia</h1>
-      <p className="text-slate-400">
-        Recomendaciones por preferencias y disponibilidad. La coincidencia
-        representa reglas del catálogo, no una garantía de satisfacción.
-      </p>
-      <form onSubmit={submit} className="grid sm:grid-cols-2 gap-4">
+    <section className="space-y-8">
+      <div className="grid items-start gap-6 lg:grid-cols-[.9fr_1.1fr] lg:gap-10">
+        <header className="space-y-4 pt-2 lg:pt-7">
+          <Compass aria-hidden className="size-8 stroke-[1.4] text-gold-300" />
+          <h1 className="delta-title max-w-md">Encuentra tu fragancia</h1>
+          <p className="max-w-md text-slate-300">
+            Elige tu presupuesto, tu familia olfativa y el momento en que usarás
+            la fragancia. Te mostraremos opciones disponibles del catálogo.
+          </p>
+        </header>
+        <form onSubmit={submit} className="delta-card grid gap-4 sm:grid-cols-2">
         {(
           [
             {
@@ -71,7 +83,7 @@ export default function Wizard() {
             },
           ] as const
         ).map((f) => (
-          <label key={f.key}>
+          <label key={f.key} className="min-w-0">
             {f.label}
             <select
               className="delta-input"
@@ -80,9 +92,7 @@ export default function Wizard() {
             >
               {f.options.map((o) => (
                 <option key={o} value={o}>
-                  {o in BUDGET_LABELS
-                    ? BUDGET_LABELS[o as keyof typeof BUDGET_LABELS]
-                    : o}
+                  {optionsLabels[o] ?? o}
                 </option>
               ))}
             </select>
@@ -90,8 +100,10 @@ export default function Wizard() {
         ))}
         <button className="delta-button sm:col-span-2" disabled={busy}>
           {busy ? "Buscando coincidencias…" : "Ver recomendaciones"}
+          {!busy && <ArrowUpRight aria-hidden className="size-4" />}
         </button>
-      </form>
+        </form>
+      </div>
       {error && (
         <p role="alert" className="text-red-300">
           {error}
@@ -103,31 +115,36 @@ export default function Wizard() {
           otra categoría o consulta a la tienda.
         </p>
       )}
-      {results && (
-        <div className="grid sm:grid-cols-2 gap-4">
+      {!!results?.length && (
+        <section className="space-y-4 border-t border-gold-400/20 pt-6" aria-labelledby="recomendaciones">
+          <h2 id="recomendaciones" className="text-3xl">Tu selección</h2>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {results.map(({ product, score, reasons }) => (
             <article
               key={product.id}
-              className="delta-card space-y-3 transition-colors hover:border-amber-400/40"
+              className="delta-product-card flex flex-col"
             >
-              <ProductPhoto src={product.image_url} name={product.name} className="aspect-[4/3] w-full" />
-              <h2 className="text-xl">{product.name}</h2>
-              <p>{score}% de coincidencia con las reglas</p>
+              <ProductPhoto src={product.image_url} name={product.name} className="aspect-[4/3] w-full rounded-none border-0" />
+              <div className="flex flex-1 flex-col gap-3 p-5">
+              <span className="delta-eyebrow">{score}% de coincidencia</span>
+              <h3 className="text-2xl">{product.name}</h3>
               <ul className="text-sm text-slate-300 list-disc pl-4">
                 {reasons.map((r) => (
                   <li key={r}>{r}</li>
                 ))}
               </ul>
-              <p>{formatCOP(product.price)}</p>
+              <p className="mt-auto text-lg font-semibold text-gold-300">{formatCOP(product.price)}</p>
               <Link
-                className="text-amber-300"
+                className="delta-secondary w-fit"
                 href={`/tienda/producto/${product.id}`}
               >
-                Ver este perfume →
+                Ver este perfume <ArrowUpRight aria-hidden className="size-4" />
               </Link>
+              </div>
             </article>
           ))}
-        </div>
+          </div>
+        </section>
       )}
     </section>
   );

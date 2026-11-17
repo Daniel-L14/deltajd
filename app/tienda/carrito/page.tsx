@@ -2,6 +2,8 @@
 import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import Navbar from "@/app/components/layout/Navbar";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/CartContext";
 import { api, RequestError } from "@/lib/client-api";
@@ -201,9 +203,11 @@ export default function Checkout() {
     }
   }
   return (
-    <main className="delta-container max-w-3xl space-y-6">
-      <Link href="/tienda">← Seguir comprando</Link>
-      <h1 className="text-3xl">Revisar pedido</h1>
+    <div className="delta-frame min-h-screen">
+    <Navbar />
+    <main className="delta-container space-y-6">
+      <Link href="/tienda" className="delta-secondary"><ArrowLeft aria-hidden className="size-4" /> Seguir comprando</Link>
+      <h1 className="delta-title">Revisar pedido</h1>
       {storageError && <p role="alert">{storageError}</p>}
       {error && (
         <p role="alert" className="text-red-300">
@@ -213,11 +217,11 @@ export default function Checkout() {
       {!ready ? (
         <p>Cargando carrito…</p>
       ) : !cart.length ? (
-        <p>
-          No tienes productos. <Link href="/tienda">Ir al catálogo</Link>
+        <p className="delta-card text-slate-300">
+          No tienes productos. <Link href="/tienda" className="text-gold-300 hover:underline">Ir al catálogo</Link>
         </p>
       ) : (
-        <>
+        <div className="grid items-start gap-5 lg:grid-cols-[1.1fr_.9fr]">
           <div className="delta-card space-y-4">
             {inventoryError && (
               <div>
@@ -237,7 +241,7 @@ export default function Checkout() {
               return (
                 <div
                   key={i.id}
-                  className="flex flex-wrap items-center justify-between gap-3"
+                  className="flex flex-wrap items-center justify-between gap-3 border-b border-gold-400/15 py-3 last:border-b-0"
                 >
                   <div className="flex items-start gap-3">
                     <ProductPhoto src={product ? product.image_url : i.image} name={i.name} compact className="size-16 shrink-0" />
@@ -257,8 +261,8 @@ export default function Checkout() {
                     )}
                   </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
+                  <div className="flex items-center gap-2 text-sm">
+                    <button className="delta-secondary size-11"
                       disabled={busy}
                       aria-label={`Restar ${i.name}`}
                       onClick={() => updateQuantity(i.id, i.quantity - 1)}
@@ -267,6 +271,7 @@ export default function Checkout() {
                     </button>
                     <span>{i.quantity}</span>
                     <button
+                      className="delta-secondary size-11"
                       disabled={
                         busy ||
                         i.quantity >= 99 ||
@@ -373,8 +378,9 @@ export default function Checkout() {
               <Link href="/cuenta/pedidos">Ver mis pedidos</Link>
             </form>
           )}
-        </>
+        </div>
       )}
     </main>
+    </div>
   );
 }

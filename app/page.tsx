@@ -11,13 +11,12 @@ import { useCart } from "@/app/context/CartContext";
 import { useMember } from "@/lib/useMember";
 import { TIERS } from "@/lib/club";
 import { formatCOP } from "@/lib/format";
-import HeroBottle from "@/app/components/home/HeroBottle";
+import Image from "next/image";
 import MemberPanel from "@/app/components/home/MemberPanel";
 import {
   Sparkles,
   ShoppingBag,
   ShieldCheck,
-  Flame,
   MapPin,
   Truck,
   MessageCircle,
@@ -42,20 +41,6 @@ interface Destacado {
   description: string;
   image_url: string | null;
 }
-
-const NOTAS = [
-  "Oud ahumado",
-  "Ámbar gris",
-  "Sándalo australiano",
-  "Rosa de Grasse",
-  "Bergamota de Calabria",
-  "Vainilla negra",
-  "Incienso",
-  "Almizcle blanco",
-  "Cardamomo",
-  "Pimienta rosa",
-  "Jazmín silvestre",
-];
 
 const PASOS_RECOMENDADOR = [
   "Tu presupuesto",
@@ -139,18 +124,22 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <div className="md:hidden">
-        <Navbar />
+      <div className="sticky top-0 z-50 md:hidden">
+        <Navbar account={user && (
+          <button type="button" onClick={signOut} className="rounded-md px-3 py-2.5 text-left text-sm text-slate-300 hover:bg-gold-400/10">
+            Cerrar sesión
+          </button>
+        )} />
       </div>
       {/* ---------- Header ---------- */}
-      <header className="sticky top-0 z-50 border-b border-gold-400/10 bg-slate-950/80 px-6 py-3.5 backdrop-blur-md">
+      <header className="delta-nav sticky top-0 z-50 hidden px-6 py-4 md:block">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="p-2.5 rounded-2xl border border-gold-400/30 bg-gold-500/10 text-gold-400 transition-transform group-hover:scale-105">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-display text-xl font-semibold tracking-[0.25em] text-white block leading-none">
+              <span className="delta-wordmark block">
                 DELTA
               </span>
               <span className="text-[10px] text-gold-400/80 font-medium tracking-wider">
@@ -195,6 +184,10 @@ export default function HomePage() {
           </nav>
 
           <div className="flex items-center gap-2.5">
+            <Link href="/tienda/carrito" className="delta-secondary" aria-label="Ver carrito">
+              <ShoppingBag aria-hidden className="size-4" />
+              {!!cart.length && <span>{cart.reduce((sum, item) => sum + item.quantity, 0)}</span>}
+            </Link>
             {loading ? (
               <div
                 className="h-9 w-28 rounded-xl bg-slate-900 animate-pulse"
@@ -242,133 +235,46 @@ export default function HomePage() {
 
       <main className="flex-1">
         {/* ---------- Hero ---------- */}
-        <section className="grain relative overflow-hidden">
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="absolute -top-40 -left-32 h-[34rem] w-[34rem] rounded-full bg-wine-800/50 blur-[120px]" />
-            <div className="absolute top-1/3 -right-40 h-[30rem] w-[30rem] rounded-full bg-gold-600/15 blur-[120px]" />
-          </div>
-
-          <div className="relative px-6 py-14 md:py-20 max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-10 items-center">
-            <div className="space-y-7 text-center lg:text-left">
-              <div className="hero-in hero-in-1 inline-flex items-center gap-2 rounded-full border border-gold-400/25 bg-gold-500/10 px-3.5 py-1.5 text-xs font-semibold text-gold-300">
-                <MapPin className="w-3.5 h-3.5" /> Perfumería y atención en
-                línea
-              </div>
-
-              <h1 className="hero-in hero-in-2 font-display text-5xl sm:text-6xl xl:text-7xl font-semibold text-white leading-[1.05] tracking-tight">
-                El arte de la alta perfumería
-              </h1>
-
-              <p className="hero-in hero-in-3 text-slate-300 text-base max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                Fragancias para diferentes preferencias y ocasiones, elegidos
-                para dejar una huella olfativa que nadie olvida.
+        <section className="delta-campaign">
+          <div className="mx-auto grid max-w-[90rem] items-center gap-10 px-5 py-9 sm:px-8 sm:py-12 lg:grid-cols-[.88fr_1.12fr] lg:gap-14 lg:px-14 lg:py-16">
+            <div className="max-w-2xl space-y-6 lg:py-5">
+              <p className="delta-eyebrow flex items-center gap-2">
+                <MapPin aria-hidden className="size-4" /> Perfumería en Bogotá
               </p>
-
-              <div className="hero-in hero-in-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
-                {user ? (
-                  <a
-                    href="#mi-espacio"
-                    className="btn-shine w-full sm:w-auto px-7 py-4 rounded-2xl bg-gold-500 hover:bg-gold-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-gold-500/20 transition-colors"
-                  >
-                    <Crown className="w-4 h-4" /> Ir a mi espacio
-                  </a>
-                ) : (
-                  <Link
-                    href="/tienda"
-                    className="btn-shine w-full sm:w-auto px-7 py-4 rounded-2xl bg-gold-500 hover:bg-gold-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-gold-500/20 transition-colors"
-                  >
-                    <ShoppingBag className="w-4 h-4" /> Explorar el catálogo
-                  </Link>
-                )}
-                <Link
-                  href={user ? "/tienda" : "/test"}
-                  className="w-full sm:w-auto px-7 py-4 rounded-2xl border border-gold-400/30 bg-slate-950/40 text-gold-200 hover:bg-gold-500/10 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
-                >
-                  {user ? (
-                    <>
-                      <ShoppingBag className="w-4 h-4" /> Explorar el catálogo
-                    </>
-                  ) : (
-                    <>
-                      <Compass className="w-4 h-4" /> Encontrar mi fragancia
-                    </>
-                  )}
+              <h1 className="font-display text-[clamp(3rem,7vw,7rem)] leading-[.92] tracking-[-.065em] text-slate-100">
+                El arte de la <em className="text-gold-300">alta perfumería</em>
+              </h1>
+              <p className="max-w-md text-base leading-7 text-slate-300 sm:text-lg">
+                Descubre fragancias para el día a día, ocasiones especiales y
+                cada forma de llevar tu aroma.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/tienda" className="delta-button min-h-12">
+                  <ShoppingBag aria-hidden className="size-4" /> Explorar el catálogo
                 </Link>
-                {isAdmin && (
-                  <Link
-                    href="/admin"
-                    className="w-full sm:w-auto px-5 py-4 rounded-2xl border border-gold-400/30 text-gold-300 hover:bg-gold-500/10 font-bold text-sm flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <ShieldCheck className="w-4 h-4" /> Panel de control
-                  </Link>
-                )}
+                <Link href="/test" className="delta-secondary min-h-12">
+                  <Compass aria-hidden className="size-4" /> Encontrar mi fragancia
+                </Link>
+                {user && <a href="#mi-espacio" className="delta-secondary min-h-12">Mi espacio</a>}
+                {isAdmin && <Link href="/admin" className="delta-secondary min-h-12">Panel de control</Link>}
               </div>
-
-              <ul className="hero-in hero-in-4 flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 pt-2 text-xs text-slate-400">
-                <li className="flex items-center gap-1.5">
-                  <Truck className="w-4 h-4 text-gold-400" /> Entrega coordinada
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <MessageCircle className="w-4 h-4 text-gold-400" /> Pedido
-                  confirmado por WhatsApp
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <Droplets className="w-4 h-4 text-gold-400" /> Extractos
-                  concentrados
-                </li>
+              <ul className="flex flex-wrap gap-x-5 gap-y-2 border-t border-gold-400/20 pt-5 text-xs text-slate-300">
+                <li className="flex items-center gap-2"><Truck aria-hidden className="size-4 text-gold-400" /> Entrega coordinada</li>
+                <li className="flex items-center gap-2"><MessageCircle aria-hidden className="size-4 text-gold-400" /> Atención por WhatsApp</li>
               </ul>
             </div>
-
-            <div className="relative mx-auto w-full max-w-md">
-              <HeroBottle className="w-full h-auto drop-shadow-[0_30px_60px_rgba(212,166,74,0.15)]" />
-
-              <div className="glass absolute -bottom-2 left-0 sm:-left-6 w-60 rounded-2xl p-4 space-y-3 shadow-2xl">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="flex items-center gap-1 font-semibold text-gold-300">
-                    <Flame className="w-3.5 h-3.5" /> Explora el catálogo
-                  </span>
-                </div>
-                <div>
-                  <div className="font-display text-lg font-semibold text-white leading-tight">
-                    Encuentra tu fragancia
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    Consulta presentaciones y disponibilidad
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-gold-300">
-                    Ver precios
-                  </span>
-                  <Link
-                    href="/tienda"
-                    className="rounded-lg bg-gold-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-gold-400 transition-colors"
-                  >
-                    Explorar
-                  </Link>
-                </div>
-              </div>
+            <div className="relative aspect-[5/4] overflow-hidden rounded-2xl border border-gold-400/20 sm:aspect-[3/2] lg:aspect-[5/4]">
+              <Image
+                src="/branding/delta-campana.webp"
+                alt="Imagen de campaña de DELTA con un frasco ámbar iluminado en dorado"
+                fill
+                unoptimized
+                preload
+                className="object-cover object-[58%_50%]"
+              />
             </div>
           </div>
         </section>
-
-        {/* ---------- Cinta de notas olfativas ---------- */}
-        <div
-          aria-hidden
-          className="marquee overflow-hidden border-y border-gold-400/10 bg-wine-950/60 py-4"
-        >
-          <div className="marquee-track flex items-center gap-10 text-sm text-gold-200/80 font-display italic">
-            {[...NOTAS, ...NOTAS].map((nota, i) => (
-              <span
-                key={i}
-                className="flex items-center gap-10 whitespace-nowrap"
-              >
-                {nota}
-                <span className="block h-1.5 w-1.5 rotate-45 bg-gold-500/70" />
-              </span>
-            ))}
-          </div>
-        </div>
 
         {/* ---------- Club DELTA: miembro vs. invitado ---------- */}
         {loading ? (
@@ -479,8 +385,7 @@ export default function HomePage() {
                 Fragancias destacadas
               </h2>
               <p className="text-sm text-slate-400 max-w-md">
-                Una muestra de la casa: oud, flores de Grasse y extractos de
-                alta concentración.
+                Explora una selección del catálogo y consulta sus notas, precios y disponibilidad.
               </p>
             </div>
             <Link
@@ -498,11 +403,9 @@ export default function HomePage() {
               return (
                 <article
                   key={p.id}
-                  className="group overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 transition-colors hover:border-gold-400/40"
+                  className="delta-product-card group"
                 >
-                  <div
-                    className="relative overflow-hidden"
-                  >
+                  <div className="relative overflow-hidden">
                     <ProductPhoto src={p.image_url} name={p.name} className="aspect-[4/3] w-full rounded-none border-0" />
                     <span className="absolute left-4 top-4 rounded-full border border-gold-400/25 bg-slate-950/60 px-3 py-1 text-[11px] font-semibold text-gold-300 backdrop-blur">
                       {p.family}
@@ -532,8 +435,8 @@ export default function HomePage() {
 
                   <div className="space-y-4 p-6">
                     <div className="space-y-1.5">
-                      <h3 className="font-display text-xl font-semibold text-white">
-                        {p.name}
+                      <h3 className="font-display text-2xl font-semibold text-slate-100">
+                        <Link href={`/tienda/producto/${p.id}`} className="hover:text-gold-300">{p.name}</Link>
                       </h3>
                       <p className="text-xs text-slate-500">{p.brand}</p>
                       <p className="text-sm text-slate-400 leading-relaxed line-clamp-3">
@@ -594,19 +497,17 @@ export default function HomePage() {
               </Link>
             </div>
 
-            <ol className="space-y-3">
-              {PASOS_RECOMENDADOR.map((paso, i) => (
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {PASOS_RECOMENDADOR.map((paso) => (
                 <li
                   key={paso}
                   className="glass flex items-center gap-4 rounded-2xl px-5 py-3.5"
                 >
-                  <span className="font-display text-2xl font-semibold text-gold-gradient w-6 text-center">
-                    {i + 1}
-                  </span>
+                  <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-gold-400" />
                   <span className="text-sm text-slate-200">{paso}</span>
                 </li>
               ))}
-            </ol>
+            </ul>
           </div>
         </section>
 
@@ -649,7 +550,7 @@ export default function HomePage() {
       </main>
 
       {/* ---------- Footer ---------- */}
-      <footer className="bg-slate-900/60 border-t border-gold-400/10 px-6 py-12">
+      <footer className="bg-slate-900 border-t border-gold-400/20 px-6 py-12">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 text-xs text-slate-400 pb-12 border-b border-slate-800">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -659,7 +560,7 @@ export default function HomePage() {
               </span>
             </div>
             <p className="leading-relaxed">
-              Descubre fragancias para acompañar el aroma perfecto a tu puerta.
+              Perfumería y asesoría en Bogotá, Colombia.
             </p>
           </div>
 
@@ -733,14 +634,6 @@ export default function HomePage() {
 
         <div className="max-w-6xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <p>© {year} DELTA Perfumería. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-4">
-            <span className="hover:text-slate-400 transition-colors cursor-pointer">
-              Privacidad
-            </span>
-            <span className="hover:text-slate-400 transition-colors cursor-pointer">
-              Términos del servicio
-            </span>
-          </div>
         </div>
       </footer>
     </div>

@@ -3,6 +3,8 @@ import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { Suspense } from "react";
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { ArrowLeft, ShoppingBag } from "lucide-react";
+import Navbar from "@/app/components/layout/Navbar";
 import { api } from "@/lib/client-api";
 import type { Product } from "@/lib/products";
 import { useCart } from "@/app/context/CartContext";
@@ -26,19 +28,22 @@ function Content({ params }: { params: Promise<{ id: string }> }) {
     };
   }, [id]);
   return (
-    <main className="delta-container space-y-5">
-      <Link href="/tienda">← Volver al catálogo</Link>
+    <div className="delta-frame min-h-screen">
+    <Navbar />
+    <main className="delta-container space-y-6">
+      <Link href="/tienda" className="delta-secondary"><ArrowLeft aria-hidden className="size-4" /> Volver al catálogo</Link>
       {error ? (
         <p role="alert">{error}</p>
       ) : !product ? (
         <p>Cargando…</p>
       ) : (
-        <article className="delta-card grid md:grid-cols-2 gap-8">
+        <article className="delta-card grid items-start gap-7 md:grid-cols-2 lg:gap-12">
           <ProductPhoto src={product.image_url} name={product.name} className="aspect-square w-full" />
-          <div className="space-y-4">
-            <p>{product.brand}</p>
-            <h1 className="text-3xl">{product.name}</h1>
-            <p>{product.description}</p>
+          <div className="min-w-0 space-y-5 md:py-3">
+            <p className="delta-eyebrow">{product.brand}</p>
+            <h1 className="delta-title">{product.name}</h1>
+            {product.description && <p className="leading-7 text-slate-300">{product.description}</p>}
+            <div className="space-y-2 border-y border-gold-400/20 py-4 text-sm text-slate-300">
             <p>Familia: {product.family}</p>
             <p>Notas: {product.notes || "Por completar"}</p>
             <p>
@@ -51,7 +56,8 @@ function Content({ params }: { params: Promise<{ id: string }> }) {
             <p>
               Ocasión: {product.occasion} · Clima: {product.climate_preference}
             </p>
-            <p className="text-2xl text-amber-300">
+            </div>
+            <p className="text-3xl font-semibold text-gold-300">
               {formatCOP(product.price)}
             </p>
             <p>Disponibles: {product.stock}</p>
@@ -71,9 +77,9 @@ function Content({ params }: { params: Promise<{ id: string }> }) {
                 })
               }
             >
-              Añadir al carrito
+              <ShoppingBag aria-hidden className="size-4" /> Añadir al carrito
             </button>
-            <Link href="/tienda/carrito" className="block">
+            <Link href="/tienda/carrito" className="block w-fit text-sm text-gold-300 hover:underline">
               Revisar carrito →
             </Link>
             <p className="text-sm text-slate-400">
@@ -84,6 +90,7 @@ function Content({ params }: { params: Promise<{ id: string }> }) {
         </article>
       )}
     </main>
+    </div>
   );
 }
 
