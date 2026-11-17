@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { formatCOP } from '@/lib/format';
+import { useEffect, useState } from "react";
+import { formatCOP } from "@/lib/format";
 import {
   DollarSign,
   ShoppingBag,
@@ -9,9 +9,11 @@ import {
   AlertCircle,
   Flame,
   Package,
-} from 'lucide-react';
+} from "lucide-react";
 
 type Resumen = {
+  importePendiente: number;
+  historicosSinFechaPago: number;
   ventasHoy: number;
   ventasMes: number;
   pedidosNuevos: number;
@@ -25,10 +27,10 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/stats/resumen')
+    fetch("/api/stats/resumen")
       .then(async (r) => {
         const d = await r.json();
-        if (!r.ok) throw new Error(d.error ?? 'Error al cargar stats');
+        if (!r.ok) throw new Error(d.error ?? "Error al cargar stats");
         setData(d);
       })
       .catch((e) => setError(e.message));
@@ -55,12 +57,27 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-2xl font-extrabold text-white">Dashboard General</h1>
+        <h1 className="text-2xl font-extrabold text-white">
+          Dashboard General
+        </h1>
         <p className="text-xs text-slate-400">
           Resumen operativo y comercial de la perfumería DELTA.
         </p>
       </div>
 
+      <div className="delta-card space-y-2">
+        <p>Importe pendiente de cobro: {formatCOP(data.importePendiente)}</p>
+        <p className="text-sm text-slate-400">
+          Ventas por fecha de pago, zona America/Bogota. Incluye pedidos pagados
+          y entregados.
+        </p>
+        {data.historicosSinFechaPago > 0 && (
+          <p className="text-amber-300">
+            Hay {data.historicosSinFechaPago} pedidos históricos sin fecha de
+            pago; no se incluyen en ventas por período hasta conciliarlos.
+          </p>
+        )}
+      </div>
       {/* 4 KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPI
@@ -98,7 +115,9 @@ export default function AdminDashboardPage() {
             Top 5 productos del mes
           </h2>
           {data.topProductos.length === 0 ? (
-            <p className="text-xs text-slate-500">Aún no hay ventas este mes.</p>
+            <p className="text-xs text-slate-500">
+              Aún no hay ventas este mes.
+            </p>
           ) : (
             <div className="space-y-3">
               {data.topProductos.map((p, i) => {
@@ -109,7 +128,9 @@ export default function AdminDashboardPage() {
                       <span className="text-white">
                         {i + 1}. {p.nombre}
                       </span>
-                      <span className="text-amber-400 font-bold">{p.cantidad}</span>
+                      <span className="text-amber-400 font-bold">
+                        {p.cantidad}
+                      </span>
                     </div>
                     <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <div
@@ -162,24 +183,26 @@ function KPI({
   titulo: string;
   valor: string;
   icono: React.ReactNode;
-  color: 'emerald' | 'amber' | 'blue' | 'purple';
+  color: "emerald" | "amber" | "blue" | "purple";
   destacado?: boolean;
 }) {
   const colores = {
-    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-    purple: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+    emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+    amber: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    blue: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    purple: "bg-purple-500/10 text-purple-400 border-purple-500/30",
   };
   return (
     <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-2">
       <div className="text-slate-400 text-xs font-semibold flex justify-between items-center">
         <span>{titulo}</span>
-        <span className={`p-1.5 rounded-lg border ${colores[color]}`}>{icono}</span>
+        <span className={`p-1.5 rounded-lg border ${colores[color]}`}>
+          {icono}
+        </span>
       </div>
       <div
         className={`font-extrabold ${
-          destacado ? 'text-2xl text-amber-400' : 'text-2xl text-white'
+          destacado ? "text-2xl text-amber-400" : "text-2xl text-white"
         }`}
       >
         {valor}

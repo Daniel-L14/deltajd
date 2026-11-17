@@ -1,24 +1,24 @@
-export type EstadoPedido = 'nuevo' | 'pagado' | 'entregado' | 'cancelado';
+export type EstadoPedido = "nuevo" | "pagado" | "entregado" | "cancelado";
 
 export const ESTADOS: EstadoPedido[] = [
-  'nuevo',
-  'pagado',
-  'entregado',
-  'cancelado',
+  "nuevo",
+  "pagado",
+  "entregado",
+  "cancelado",
 ];
 
 export const ESTADO_LABEL: Record<EstadoPedido, string> = {
-  nuevo: 'Nuevo',
-  pagado: 'Pagado',
-  entregado: 'Entregado',
-  cancelado: 'Cancelado',
+  nuevo: "Nuevo",
+  pagado: "Pagado",
+  entregado: "Entregado",
+  cancelado: "Cancelado",
 };
 
 export const ESTADO_COLOR: Record<EstadoPedido, string> = {
-  nuevo: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-  pagado: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-  entregado: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
-  cancelado: 'bg-slate-600/20 text-slate-400 border-slate-600/40',
+  nuevo: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  pagado: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+  entregado: "bg-blue-500/20 text-blue-300 border-blue-500/40",
+  cancelado: "bg-slate-600/20 text-slate-400 border-slate-600/40",
 };
 
 export type ItemPedido = {
@@ -37,9 +37,11 @@ export type Pedido = {
   cliente_nombre: string;
   cliente_telefono: string;
   direccion: string;
-  items: ItemPedido[] | any;
+  items: ItemPedido[];
   total: number;
   estado: EstadoPedido;
+  cliente_email?: string;
+  paid_at?: string | null;
   notas_admin?: string | null;
   whatsapp_confirmado?: boolean; // <-- AQUÍ ESTÁ LA SOLUCIÓN
   created_at: string;

@@ -1,4 +1,1 @@
-import { NextResponse } from 'next/server';
-
-// TODO: implementar lógica
-export async function GET() { return NextResponse.json({ ok: true }); }
+export { GET } from "../../stats/resumen/route";

@@ -1,198 +1,351 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Package, Plus, Trash2, Edit, Save, X, Search, RefreshCw } from 'lucide-react';
-
-interface Producto {
-  id: string;
-  name: string;
-  brand: string;
-  family: string;
-  price: number;
-  stock: number;
-  description: string;
-}
-
-export default function InventarioPage() {
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [search, setSearch] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  // Formulario de creación
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('10');
-  const [family, setFamily] = useState('Orientales & Madera');
-  const [description, setDescription] = useState('');
-
-  // Formulario de edición rápida
-  const [editPrice, setEditPrice] = useState(0);
-  const [editStock, setEditStock] = useState(0);
-
-  const supabase = createClient();
-
-  const fetchProductos = async () => {
-    const { data } = await supabase
-      .from('productos')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (data) setProductos(data as Producto[]);
-  };
-
-  useEffect(() => {
-    fetchProductos();
-
-    // Sincronización en tiempo real
-    const channel = supabase
-      .channel('admin-inventario-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, () => {
-        fetchProductos();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [supabase]);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !price) return;
-
-    const newProd = {
-      name,
-      brand: 'DELTA Private Blend',
-      family,
-      price: parseFloat(price),
-      stock: parseInt(stock) || 0,
-      description
-    };
-
-    const { error } = await supabase.from('productos').insert([newProd]);
-    if (!error) {
-      setName('');
-      setPrice('');
-      setDescription('');
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { api } from "@/lib/client-api";
+import { type Product, FAMILIES } from "@/lib/products";
+import { formatCOP } from "@/lib/format";
+import Link from "next/link";
+const empty = {
+  name: "",
+  brand: "",
+  family: "Amaderada",
+  price: 0,
+  stock: 0,
+  description: "",
+  image_url: "",
+  presentation_ml: null as number | null,
+  concentration: "",
+  notes: "",
+  budget_category: "ECONOMICO",
+  occasion: "Diario",
+  climate_preference: "TODOS",
+};
+export default function Inventory() {
+  const [products, setProducts] = useState<Product[]>([]),
+    [page, setPage] = useState(1),
+    [search, setSearch] = useState(""),
+    [count, setCount] = useState(0),
+    [form, setForm] = useState(empty),
+    [editing, setEditing] = useState<Product | null>(null),
+    [reason, setReason] = useState(""),
+    [error, setError] = useState(""),
+    [message, setMessage] = useState(""),
+    [busy, setBusy] = useState(false),
+    [loading, setLoading] = useState(true);
+  const query = new URLSearchParams({
+    admin: "1",
+    page: String(page),
+    q: search,
+  }).toString();
+  const load = useCallback(async () => {
+    try {
+      const d = await api<{ products: Product[]; count: number }>(
+        `/api/productos?${query}`,
+      );
+      setProducts(d.products);
+      setCount(d.count);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleUpdate = async (id: string) => {
-    await supabase.from('productos').update({ price: editPrice, stock: editStock }).eq('id', id);
-    setEditingId(null);
-  };
-
-  const handleDelete = async (id: string) => {
-    await supabase.from('productos').delete().eq('id', id);
-  };
-
-  const filtered = productos.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.family.toLowerCase().includes(search.toLowerCase())
-  );
-
+  }, [query]);
+  useEffect(() => {
+    let live = true;
+    api<{ products: Product[]; count: number }>(`/api/productos?${query}`)
+      .then((d) => {
+        if (live) {
+          setProducts(d.products);
+          setCount(d.count);
+          setError("");
+        }
+      })
+      .catch((e) => {
+        if (live) setError(e.message);
+      })
+      .finally(() => {
+        if (live) setLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [query]);
+  function edit(p: Product) {
+    setEditing(p);
+    setForm({ ...p, image_url: p.image_url ?? "" });
+    setReason("");
+    setMessage("");
+    document
+      .getElementById("product-form")
+      ?.scrollIntoView({ behavior: "smooth" });
+  }
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await api("/api/productos", {
+        method: "POST",
+        body: JSON.stringify({
+          ...form,
+          id: editing?.id,
+          expected_stock: editing?.stock,
+          reason,
+        }),
+      });
+      setForm(empty);
+      setEditing(null);
+      setReason("");
+      setMessage("Producto guardado. El movimiento de stock quedó registrado.");
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function archive(p: Product) {
+    if (
+      !confirm(
+        `${p.is_active ? "Archivar" : "Reactivar"} ${p.name}? El historial se conserva.`,
+      )
+    )
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      await api("/api/productos", {
+        method: "PATCH",
+        body: JSON.stringify({ id: p.id, is_active: !p.is_active }),
+      });
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-        <div>
-          <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
-            <Package className="w-6 h-6 text-amber-400" /> Control de Inventario
-          </h1>
-          <p className="text-xs text-slate-400">Todo cambio realizado aquí impactará el catálogo en tiempo real.</p>
-        </div>
-        <button
-          onClick={fetchProductos}
-          className="px-4 py-2 bg-slate-950 border border-slate-800 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-2 hover:bg-slate-800 transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5 text-amber-400" /> Actualizar
-        </button>
+    <div className="space-y-6">
+      <div className="flex flex-wrap justify-between gap-4">
+        <h1 className="text-3xl">Productos e inventario</h1>
+        <Link href="/admin/movimientos" className="delta-secondary">
+          Historial de movimientos
+        </Link>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Formulario Agregar */}
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <Plus className="w-4 h-4 text-amber-400" /> Nuevo Lanzamiento
-          </h2>
-          <form onSubmit={handleCreate} className="space-y-3 text-xs">
-            <div>
-              <label className="block text-slate-400 mb-1">Nombre</label>
-              <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500" />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
+      {error && (
+        <p role="alert" className="text-red-300">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p role="status" className="text-emerald-300">
+          {message}
+        </p>
+      )}
+      <form
+        id="product-form"
+        onSubmit={save}
+        className="delta-card grid sm:grid-cols-2 gap-4"
+      >
+        <h2 className="text-xl sm:col-span-2">
+          {editing ? "Editar producto" : "Crear producto"}
+        </h2>
+        {(
+          [
+            "name",
+            "brand",
+            "description",
+            "notes",
+            "concentration",
+            "image_url",
+          ] as const
+        ).map((key, i) => (
+          <label key={key}>
+            {
+              [
+                "Nombre",
+                "Marca",
+                "Descripción",
+                "Notas olfativas",
+                "Concentración",
+                "URL HTTPS de fotografía",
+              ][i]
+            }
+            <input
+              className="delta-input"
+              value={form[key]}
+              required={key === "name" || key === "brand"}
+              maxLength={
+                key === "description" ? 2000 : key === "image_url" ? 1000 : 500
+              }
+              onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+            />
+          </label>
+        ))}
+        {(["price", "stock"] as const).map((key) => (
+          <label key={key}>
+            {key === "price" ? "Precio (COP)" : "Stock disponible"}
+            <input
+              className="delta-input"
+              type="number"
+              min={key === "price" ? 1 : 0}
+              max={key === "price" ? 100000000 : 100000}
+              step="1"
+              required
+              value={form[key]}
+              onChange={(e) =>
+                setForm({ ...form, [key]: Number(e.target.value) })
+              }
+            />
+          </label>
+        ))}
+        <label>
+          Presentación (ml)
+          <input
+            className="delta-input"
+            type="number"
+            min="1"
+            max="5000"
+            value={form.presentation_ml ?? ""}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                presentation_ml: e.target.value ? Number(e.target.value) : null,
+              })
+            }
+          />
+        </label>
+        {(
+          [
+            { key: "family", label: "Familia", options: FAMILIES },
+            {
+              key: "budget_category",
+              label: "Categoría de presupuesto",
+              options: ["ECONOMICO", "MEDIO", "PREMIUM"],
+            },
+            {
+              key: "occasion",
+              label: "Ocasión",
+              options: ["Diario", "Trabajo", "Noche / Evento", "Todas"],
+            },
+            {
+              key: "climate_preference",
+              label: "Clima",
+              options: ["CALIDO", "FRIO", "TODOS"],
+            },
+          ] as const
+        ).map((f) => (
+          <label key={f.key}>
+            {f.label}
+            <select
+              className="delta-input"
+              value={form[f.key]}
+              onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+            >
+              {!(f.options as readonly string[]).includes(form[f.key]) && (
+                <option value={form[f.key]}>Reclasificar: {form[f.key]}</option>
+              )}
+              {f.options.map((o) => (
+                <option key={o}>{o}</option>
+              ))}
+            </select>
+          </label>
+        ))}
+        <label className="sm:col-span-2">
+          Motivo del registro o ajuste
+          <input
+            className="delta-input"
+            required
+            minLength={3}
+            maxLength={300}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Compra a proveedor, conteo físico, corrección…"
+          />
+        </label>
+        <button className="delta-button" disabled={busy}>
+          {busy ? "Guardando…" : "Guardar producto"}
+        </button>
+        {editing && (
+          <button
+            type="button"
+            className="delta-secondary"
+            onClick={() => {
+              setEditing(null);
+              setForm(empty);
+            }}
+          >
+            Cancelar edición
+          </button>
+        )}
+      </form>
+      <label className="block">
+        Buscar en inventario
+        <input
+          className="delta-input"
+          maxLength={100}
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+      </label>
+      {loading ? (
+        <p>Cargando inventario…</p>
+      ) : (
+        <div className="space-y-3">
+          {products.map((p) => (
+            <div
+              key={p.id}
+              className="delta-card flex flex-wrap justify-between gap-3"
+            >
               <div>
-                <label className="block text-slate-400 mb-1">Precio ($)</label>
-                <input type="number" required value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500" />
+                <h3 className="font-bold">
+                  {p.name} {!p.is_active && "(Archivado)"}
+                </h3>
+                <p>
+                  {formatCOP(p.price)} · Stock disponible: {p.stock}
+                </p>
+                <p className="text-sm text-slate-400">
+                  {p.family} · {p.budget_category}
+                </p>
               </div>
-              <div>
-                <label className="block text-slate-400 mb-1">Stock</label>
-                <input type="number" value={stock} onChange={e => setStock(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500" />
+              <div className="flex gap-2">
+                <button
+                  disabled={busy}
+                  className="delta-secondary"
+                  onClick={() => edit(p)}
+                >
+                  Editar
+                </button>
+                <button
+                  disabled={busy}
+                  className="delta-secondary"
+                  onClick={() => void archive(p)}
+                >
+                  {p.is_active ? "Archivar" : "Reactivar"}
+                </button>
               </div>
             </div>
-            <div>
-              <label className="block text-slate-400 mb-1">Familia Olfativa</label>
-              <select value={family} onChange={e => setFamily(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-amber-500">
-                <option value="Orientales & Madera">Orientales & Madera</option>
-                <option value="Extractos Concentrados">Extractos Concentrados</option>
-                <option value="Cítricos & Florales">Cítricos & Florales</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-slate-400 mb-1">Descripción</label>
-              <textarea rows={2} value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white resize-none focus:outline-none focus:border-amber-500" />
-            </div>
-            <button type="submit" className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition-colors">
-              Publicar en Catálogo
-            </button>
-          </form>
+          ))}
         </div>
-
-        {/* Lista de productos */}
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 lg:col-span-2">
-          <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-            <h2 className="text-base font-bold text-white">Catálogo Activo ({filtered.length})</h2>
-            <div className="relative w-48">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar..." className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500" />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {filtered.map((prod) => (
-              <div key={prod.id} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div>
-                  <h3 className="font-bold text-white text-sm">{prod.name}</h3>
-                  <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">{prod.family}</span>
-                </div>
-
-                {editingId === prod.id ? (
-                  <div className="flex items-center gap-2">
-                    <input type="number" value={editPrice} onChange={e => setEditPrice(Number(e.target.value))} className="w-24 bg-slate-900 border border-amber-500 rounded p-1 text-xs text-amber-400 font-bold" />
-                    <input type="number" value={editStock} onChange={e => setEditStock(Number(e.target.value))} className="w-16 bg-slate-900 border border-amber-500 rounded p-1 text-xs text-white" />
-                    <button onClick={() => handleUpdate(prod.id)} className="p-1.5 bg-emerald-600 text-white rounded-lg"><Save className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => setEditingId(null)} className="p-1.5 bg-slate-800 text-slate-400 rounded-lg"><X className="w-3.5 h-3.5" /></button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <div className="text-amber-400 font-extrabold text-sm">${Number(prod.price).toLocaleString()}</div>
-                      <div className="text-[10px] text-slate-400">Stock: {prod.stock} unids</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => { setEditingId(prod.id); setEditPrice(prod.price); setEditStock(prod.stock); }} className="p-2 bg-slate-900 text-slate-300 hover:text-amber-400 rounded-xl transition-colors">
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDelete(prod.id)} className="p-2 bg-slate-900 text-slate-300 hover:text-red-400 rounded-xl transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      )}
+      <div className="flex justify-between">
+        <button
+          disabled={page === 1 || loading}
+          onClick={() => setPage(page - 1)}
+        >
+          Anterior
+        </button>
+        <span>Página {page}</span>
+        <button
+          disabled={page * 24 >= count || loading}
+          onClick={() => setPage(page + 1)}
+        >
+          Siguiente
+        </button>
       </div>
     </div>
   );

@@ -1,17 +1,24 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Sparkles, LayoutDashboard, Package, ShoppingCart, Archive, Users, Settings, ArrowLeft, Home } from 'lucide-react';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Sparkles,
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Archive,
+  Home,
+} from "lucide-react";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
 
   const links = [
-    { href: '/admin', label: 'Resumen', icon: LayoutDashboard },
-    { href: '/admin/productos', label: 'Productos', icon: Package },
-    { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingCart },
-    { href: '/admin/inventario', label: 'Inventario', icon: Archive },
+    { href: "/admin", label: "Resumen", icon: LayoutDashboard },
+    { href: "/admin/productos", label: "Productos", icon: Package },
+    { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
+    { href: "/admin/inventario", label: "Inventario", icon: Archive },
   ];
 
   return (
@@ -24,8 +31,12 @@ export default function AdminSidebar() {
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <div className="font-bold text-white tracking-widest text-lg">DELTA</div>
-              <div className="text-[10px] text-slate-400 font-medium">Perfumería Admin</div>
+              <div className="font-bold text-white tracking-widest text-lg">
+                DELTA
+              </div>
+              <div className="text-[10px] text-slate-400 font-medium">
+                Perfumería Admin
+              </div>
             </div>
           </div>
 
@@ -52,8 +63,8 @@ export default function AdminSidebar() {
                 href={link.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-colors ${
                   isActive
-                    ? 'bg-amber-500 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:bg-slate-950 hover:text-slate-200'
+                    ? "bg-amber-500 text-slate-950 font-bold"
+                    : "text-slate-400 hover:bg-slate-950 hover:text-slate-200"
                 }`}
               >
                 <Icon className="w-4 h-4" />

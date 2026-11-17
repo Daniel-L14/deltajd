@@ -1,9 +1,8 @@
-'use client';
-
-export default function VentasView() {
+export default function View() {
   return (
-    <div className="bg-white rounded-xl shadow p-6">
-      <p className="text-gray-500">VentasView — TODO: implementar</p>
-    </div>
+    <p>
+      Este módulo no está habilitado. Usa las secciones de pedidos e inventario
+      disponibles.
+    </p>
   );
 }

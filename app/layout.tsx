@@ -1,20 +1,21 @@
-import type { Metadata } from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
-import './globals.css';
-import { CartProvider } from '@/app/context/CartContext';
+import type { Metadata } from "next";
+import { Inter, Playfair_Display } from "next/font/google";
+import "./globals.css";
+import { CartProvider } from "@/app/context/CartContext";
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ["latin"] });
 
 const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  style: ['normal', 'italic'],
-  display: 'swap',
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: 'DELTA Perfumería | Alta Gama & Esencias Exclusivas',
-  description: 'Descubre fragancias artesanales de autor, extractos de perfume altamente concentrados e ingredientes finos.',
+  title: "DELTA Perfumería | Alta Gama & Esencias Exclusivas",
+  description:
+    "Explora el catálogo DELTA, encuentra fragancias según tus preferencias y consulta tus pedidos.",
 };
 
 export default function RootLayout({
@@ -27,9 +28,7 @@ export default function RootLayout({
       <body
         className={`${inter.className} bg-slate-950 text-slate-100 antialiased min-h-screen selection:bg-gold-500 selection:text-slate-950`}
       >
-        <CartProvider>
-          {children}
-        </CartProvider>
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );

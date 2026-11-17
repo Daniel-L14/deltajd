@@ -1,25 +1,31 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
-import { CheckCircle2 } from 'lucide-react';
-import AuthShell from '@/app/components/auth/AuthShell';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
+import AuthShell from "@/app/components/auth/AuthShell";
 
 function traducirError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('user already registered')) return 'Este correo ya está registrado. Intenta iniciar sesión.';
-  if (m.includes('password should be at least')) return 'La contraseña debe tener al menos 8 caracteres.';
-  if (m.includes('invalid email')) return 'El correo electrónico no es válido.';
-  if (m.includes('email not confirmed')) return 'Debes confirmar tu correo antes de continuar.';
-  if (m.includes('signups not allowed')) return 'El registro está deshabilitado temporalmente.';
+  if (m.includes("user already registered"))
+    return "Este correo ya está registrado. Intenta iniciar sesión.";
+  if (m.includes("password should be at least"))
+    return "La contraseña debe tener al menos 8 caracteres.";
+  if (m.includes("invalid email")) return "El correo electrónico no es válido.";
+  if (m.includes("email not confirmed"))
+    return "Debes confirmar tu correo antes de continuar.";
+  if (m.includes("signups not allowed"))
+    return "El registro está deshabilitado temporalmente.";
   return message;
 }
 
 export default function RegistroForm() {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const router = useRouter();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,40 +36,54 @@ export default function RegistroForm() {
     e.preventDefault();
     setError(null);
 
+    if (
+      fullName.trim().length < 2 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
+      setError("Completa tu nombre y un correo válido.");
+      return;
+    }
     if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.');
+      setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
 
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/login`,
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: fullName.trim() },
+          emailRedirectTo: `${window.location.origin}/api/auth/confirm`,
+        },
+      });
 
-    if (error) {
-      setError(traducirError(error.message));
+      if (error) {
+        setError(traducirError(error.message));
+        setLoading(false);
+        return;
+      }
+
+      if (!data.session) {
+        setSuccess(true);
+        setLoading(false);
+        return;
+      }
+
+      // Sesión creada: bienvenida al Club en la portada
+      router.replace("/?bienvenida=1");
+      router.refresh();
+    } catch {
+      setError("No se pudo conectar. Intenta de nuevo.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (!data.session) {
-      setSuccess(true);
-      setLoading(false);
-      return;
-    }
-
-    // Sesión creada: bienvenida al Club en la portada
-    window.location.href = '/?bienvenida=1';
   };
 
   const field =
-    'w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/40 transition-colors';
+    "w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/40 transition-colors";
 
   return (
     <AuthShell
@@ -88,8 +108,8 @@ export default function RegistroForm() {
             <CheckCircle2 className="w-4 h-4" /> Cuenta creada
           </div>
           <p>
-            Revisa tu correo <span className="font-semibold">{email}</span> para confirmar tu
-            cuenta y luego inicia sesión.
+            Revisa tu correo <span className="font-semibold">{email}</span> para
+            confirmar tu cuenta y luego inicia sesión.
           </p>
           <Link
             href="/login"
@@ -101,9 +121,12 @@ export default function RegistroForm() {
       )}
 
       {!success && (
-        <form onSubmit={handleRegister} className="space-y-5" noValidate>
+        <form onSubmit={handleRegister} className="space-y-5">
           <div>
-            <label htmlFor="fullName" className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label
+              htmlFor="fullName"
+              className="block text-xs font-semibold text-slate-300 mb-1.5"
+            >
               Nombre completo
             </label>
             <input
@@ -120,7 +143,10 @@ export default function RegistroForm() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label
+              htmlFor="email"
+              className="block text-xs font-semibold text-slate-300 mb-1.5"
+            >
               Correo electrónico
             </label>
             <input
@@ -136,7 +162,10 @@ export default function RegistroForm() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label
+              htmlFor="password"
+              className="block text-xs font-semibold text-slate-300 mb-1.5"
+            >
               Contraseña
             </label>
             <input
@@ -158,14 +187,17 @@ export default function RegistroForm() {
             aria-busy={loading}
             className="btn-shine w-full bg-gold-500 hover:bg-gold-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-bold py-3.5 rounded-xl text-sm transition-colors shadow-lg shadow-gold-500/10"
           >
-            {loading ? 'Creando tu cuenta…' : 'Crear mi cuenta'}
+            {loading ? "Creando tu cuenta…" : "Crear mi cuenta"}
           </button>
         </form>
       )}
 
       <p className="text-center text-xs text-slate-400">
-        ¿Ya eres miembro de DELTA?{' '}
-        <Link href="/login" className="text-gold-300 hover:underline font-semibold">
+        ¿Ya eres miembro de DELTA?{" "}
+        <Link
+          href="/login"
+          className="text-gold-300 hover:underline font-semibold"
+        >
           Inicia sesión
         </Link>
       </p>

@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
-
-// TODO: implementar lógica
-export async function GET() { return NextResponse.json({ ok: true }); }
-export async function POST(request: Request) { return NextResponse.json({ ok: true }); }
-export async function PUT(request: Request) { return NextResponse.json({ ok: true }); }
-export async function DELETE(request: Request) { return NextResponse.json({ ok: true }); }
+import { NextResponse } from "next/server";
+function unavailable() {
+  return NextResponse.json(
+    { error: "Función no habilitada en esta versión." },
+    { status: 501 },
+  );
+}
+export {
+  unavailable as GET,
+  unavailable as POST,
+  unavailable as PUT,
+  unavailable as DELETE,
+};

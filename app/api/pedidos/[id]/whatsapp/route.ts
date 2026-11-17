@@ -1,54 +1,29 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-
+import { requireAdmin } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { body, json, failure } from "@/lib/http";
+import { record, uuid, ApiError } from "@/lib/validation";
 export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-
-  // Verificar admin
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
-  }
-
-  const { data: perfil } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!perfil || perfil.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-  }
-
-  let body: { confirmar?: boolean };
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+    await requireAdmin();
+    const id = uuid((await params).id),
+      b = record(await body(request));
+    if (typeof b.confirmar !== "boolean")
+      throw new ApiError(400, "Indica confirmar: true o false.");
+    const { data, error } = await createAdminClient()
+      .from("pedidos")
+      .update({
+        whatsapp_confirmado: b.confirmar,
+        whatsapp_confirmado_at: b.confirmar ? new Date().toISOString() : null,
+      })
+      .eq("id", id)
+      .select("id,whatsapp_confirmado,whatsapp_confirmado_at")
+      .single();
+    if (error) throw error;
+    return json({ ok: true, pedido: data });
+  } catch (e) {
+    return failure(e);
   }
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from('pedidos')
-    .update({
-      whatsapp_confirmado: body.confirmar ?? true,
-      whatsapp_confirmado_at: body.confirmar ? new Date().toISOString() : null,
-    })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true, pedido: data });
 }

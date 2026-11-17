@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
+import Link from "next/link";
 import {
   Check,
   Compass,
@@ -12,11 +12,11 @@ import {
   ShoppingBag,
   Sparkles,
   X,
-} from 'lucide-react';
-import { TIERS, COP_POR_PUNTO } from '@/lib/club';
-import { ESTADO_LABEL, type EstadoPedido } from '@/lib/pedidos/types';
-import { formatCOP } from '@/lib/format';
-import type { Member } from '@/lib/useMember';
+} from "lucide-react";
+import { TIERS, COP_POR_PUNTO } from "@/lib/club";
+import { ESTADO_LABEL, type EstadoPedido } from "@/lib/pedidos/types";
+import { formatCOP } from "@/lib/format";
+import type { Member } from "@/lib/useMember";
 
 interface Props {
   member: Member;
@@ -24,12 +24,26 @@ interface Props {
   onDismissWelcome: () => void;
 }
 
-export default function MemberPanel({ member, showWelcome, onDismissWelcome }: Props) {
-  const { firstName, points, progress, ultimoPedido, favs, toggleFav, pedidosCount } = member;
+export default function MemberPanel({
+  member,
+  showWelcome,
+  onDismissWelcome,
+}: Props) {
+  const {
+    firstName,
+    points,
+    progress,
+    ultimoPedido,
+    favs,
+    toggleFav,
+    pedidosCount,
+  } = member;
   const { current, next, percent, pointsToNext } = progress;
 
-  const estado = (ultimoPedido?.estado ?? '').toLowerCase().trim() as EstadoPedido;
-  const estadoLabel = ESTADO_LABEL[estado] ?? ultimoPedido?.estado ?? '';
+  const estado = (ultimoPedido?.estado ?? "")
+    .toLowerCase()
+    .trim() as EstadoPedido;
+  const estadoLabel = ESTADO_LABEL[estado] ?? ultimoPedido?.estado ?? "";
 
   const currentIdx = TIERS.findIndex((t) => t.id === current.id);
   const unlocked = TIERS.slice(0, currentIdx + 1).flatMap((t) => t.perks);
@@ -41,6 +55,11 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
       aria-label="Tu espacio en el Club DELTA"
       className="scroll-mt-24 px-6 pt-10 max-w-6xl mx-auto w-full"
     >
+      {member.error && (
+        <p role="alert" className="text-red-300">
+          {member.error}
+        </p>
+      )}
       {showWelcome && (
         <div
           role="status"
@@ -48,8 +67,11 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
         >
           <Sparkles className="w-5 h-5 text-gold-400 mt-0.5 shrink-0" />
           <p className="flex-1 text-gold-200 leading-relaxed">
-            <span className="font-semibold text-white">Bienvenido de vuelta, {firstName}.</span>{' '}
-            Tu sesión está iniciada: guarda favoritos, sigue tus pedidos y acumula puntos en cada compra.
+            <span className="font-semibold text-white">
+              Bienvenido de vuelta, {firstName}.
+            </span>{" "}
+            Tu sesión está iniciada: guarda favoritos, sigue tus pedidos y
+            acumula puntos en cada compra.
           </p>
           <button
             onClick={onDismissWelcome}
@@ -71,15 +93,16 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
           <div className="space-y-6">
             <div className="space-y-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-400/30 bg-gold-500/10 px-3 py-1 text-xs font-semibold text-gold-300">
-                <Crown className="w-3.5 h-3.5" /> Club DELTA · nivel {current.name}
+                <Crown className="w-3.5 h-3.5" /> Club DELTA · nivel{" "}
+                {current.name}
               </span>
               <h2 className="font-display text-3xl sm:text-4xl font-semibold text-white">
                 Hola, {firstName}
               </h2>
               <p className="text-sm text-slate-400 max-w-md leading-relaxed">
                 {ultimoPedido
-                  ? `Tu último pedido${ultimoPedido.codigo ? ` ${ultimoPedido.codigo}` : ''} está en estado «${estadoLabel}». ${current.tagline}.`
-                  : 'Aún no tienes pedidos. Con el primero empiezas a acumular puntos.'}
+                  ? `Tu último pedido${ultimoPedido.codigo ? ` ${ultimoPedido.codigo}` : ""} está en estado «${estadoLabel}». ${current.tagline}.`
+                  : "Aún no tienes pedidos. Con el primero empiezas a acumular puntos."}
               </p>
             </div>
 
@@ -87,12 +110,14 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <div className="font-display text-5xl font-semibold text-gold-gradient leading-none">
-                    {points.toLocaleString('es-CO')}
+                    {points.toLocaleString("es-CO")}
                   </div>
-                  <div className="mt-1 text-xs text-slate-400">puntos acumulados</div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    puntos acumulados
+                  </div>
                 </div>
                 <div className="text-right text-xs text-slate-400">
-                  {pedidosCount} {pedidosCount === 1 ? 'pedido' : 'pedidos'}
+                  {pedidosCount} {pedidosCount === 1 ? "pedido" : "pedidos"}
                 </div>
               </div>
 
@@ -101,7 +126,11 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(percent)}
-                aria-label={next ? `Progreso hacia el nivel ${next.name}` : 'Nivel máximo alcanzado'}
+                aria-label={
+                  next
+                    ? `Progreso hacia el nivel ${next.name}`
+                    : "Nivel máximo alcanzado"
+                }
                 className="h-2.5 w-full overflow-hidden rounded-full bg-slate-800"
               >
                 <div
@@ -112,11 +141,12 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
 
               <p className="text-xs text-slate-400">
                 {next
-                  ? `Te faltan ${pointsToNext.toLocaleString('es-CO')} puntos (${formatCOP(pointsToNext * COP_POR_PUNTO)} en pedidos) para llegar a ${next.name}.`
-                  : 'Estás en el nivel más alto. Gracias por ser parte de la casa.'}
+                  ? `Te faltan ${pointsToNext.toLocaleString("es-CO")} puntos (${formatCOP(pointsToNext * COP_POR_PUNTO)} en compras confirmadas) para llegar a ${next.name}.`
+                  : "Estás en el nivel más alto. Gracias por ser parte de la casa."}
               </p>
               <p className="text-[11px] text-slate-500">
-                Ganas 1 punto por cada {formatCOP(COP_POR_PUNTO)} en pedidos que no se cancelan.
+                Ganas 1 punto por cada {formatCOP(COP_POR_PUNTO)} en cada compra
+                con pago confirmado.
               </p>
             </div>
 
@@ -131,7 +161,8 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
                 href="/test"
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:border-gold-400/50 hover:text-white transition-colors"
               >
-                <Compass className="w-4 h-4 text-gold-400" /> Encontrar mi fragancia
+                <Compass className="w-4 h-4 text-gold-400" /> Encontrar mi
+                fragancia
               </Link>
               <Link
                 href="/tienda"
@@ -149,15 +180,25 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
               </h3>
               <ul className="space-y-2">
                 {unlocked.map((perk) => (
-                  <li key={perk} className="flex items-start gap-2 text-xs text-slate-200">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" /> {perk}
+                  <li
+                    key={perk}
+                    className="flex items-start gap-2 text-xs text-slate-200"
+                  >
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />{" "}
+                    {perk}
                   </li>
                 ))}
                 {locked.map((perk) => (
-                  <li key={perk} className="flex items-start gap-2 text-xs text-slate-500">
+                  <li
+                    key={perk}
+                    className="flex items-start gap-2 text-xs text-slate-500"
+                  >
                     <Lock className="w-4 h-4 shrink-0" />
                     <span>
-                      {perk} <span className="text-slate-600">(nivel {next?.name})</span>
+                      {perk}{" "}
+                      <span className="text-slate-600">
+                        (nivel {next?.name})
+                      </span>
                     </span>
                   </li>
                 ))}
@@ -170,7 +211,8 @@ export default function MemberPanel({ member, showWelcome, onDismissWelcome }: P
               </h3>
               {favs.length === 0 ? (
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Toca el corazón en cualquier fragancia del catálogo para guardarla aquí.
+                  Toca el corazón en cualquier fragancia del catálogo para
+                  guardarla aquí.
                 </p>
               ) : (
                 <ul className="flex flex-wrap gap-2">

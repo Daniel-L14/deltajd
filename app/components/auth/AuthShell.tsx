@@ -1,9 +1,17 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Crown, Heart, Home, Package, Sparkles } from 'lucide-react';
-import HeroBottle from '@/app/components/home/HeroBottle';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Check,
+  Crown,
+  Heart,
+  Home,
+  Package,
+  Sparkles,
+} from "lucide-react";
+import HeroBottle from "@/app/components/home/HeroBottle";
 
 interface Props {
   title: string;
@@ -12,9 +20,9 @@ interface Props {
 }
 
 const BENEFICIOS = [
-  { icon: Crown, text: 'Puntos del Club DELTA en cada pedido' },
-  { icon: Heart, text: 'Favoritos guardados en tu cuenta' },
-  { icon: Package, text: 'Seguimiento de todos tus pedidos' },
+  { icon: Crown, text: "Puntos del Club DELTA en cada pedido" },
+  { icon: Heart, text: "Favoritos guardados en tu cuenta" },
+  { icon: Package, text: "Seguimiento de todos tus pedidos" },
 ];
 
 export default function AuthShell({ title, subtitle, children }: Props) {
@@ -23,13 +31,18 @@ export default function AuthShell({ title, subtitle, children }: Props) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 grid lg:grid-cols-[1.05fr_1fr]">
       <aside className="grain relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-wine-900 via-wine-950 to-slate-950 p-12">
-        <div aria-hidden className="pointer-events-none absolute -top-32 -left-24 h-96 w-96 rounded-full bg-gold-500/10 blur-3xl" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-32 -left-24 h-96 w-96 rounded-full bg-gold-500/10 blur-3xl"
+        />
 
         <Link href="/" className="relative flex items-center gap-3 w-fit">
           <div className="p-2.5 rounded-2xl border border-gold-400/30 bg-gold-500/10 text-gold-400">
             <Sparkles className="w-5 h-5" />
           </div>
-          <span className="font-display text-xl font-semibold tracking-[0.25em] text-white">DELTA</span>
+          <span className="font-display text-xl font-semibold tracking-[0.25em] text-white">
+            DELTA
+          </span>
         </Link>
 
         <div className="relative flex flex-col items-center gap-8">
@@ -40,7 +53,10 @@ export default function AuthShell({ title, subtitle, children }: Props) {
             </h2>
             <ul className="space-y-3">
               {BENEFICIOS.map(({ icon: Icon, text }) => (
-                <li key={text} className="flex items-center gap-3 text-sm text-slate-200">
+                <li
+                  key={text}
+                  className="flex items-center gap-3 text-sm text-slate-200"
+                >
                   <span className="flex h-8 w-8 items-center justify-center rounded-full border border-gold-400/25 bg-gold-500/10">
                     <Icon className="w-4 h-4 text-gold-400" />
                   </span>
@@ -52,7 +68,8 @@ export default function AuthShell({ title, subtitle, children }: Props) {
         </div>
 
         <p className="relative text-xs text-slate-500 flex items-center gap-1.5">
-          <Check className="w-3.5 h-3.5 text-gold-400" /> Crear tu cuenta es gratis
+          <Check className="w-3.5 h-3.5 text-gold-400" /> Crear tu cuenta es
+          gratis
         </p>
       </aside>
 
@@ -78,7 +95,9 @@ export default function AuthShell({ title, subtitle, children }: Props) {
             <div className="lg:hidden inline-flex p-3 rounded-2xl border border-gold-400/30 bg-gold-500/10 text-gold-400">
               <Sparkles className="w-6 h-6" />
             </div>
-            <h1 className="font-display text-4xl font-semibold text-white">{title}</h1>
+            <h1 className="font-display text-4xl font-semibold text-white">
+              {title}
+            </h1>
             <p className="text-sm text-slate-400">{subtitle}</p>
           </div>
 

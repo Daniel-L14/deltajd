@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import RecommendationWizard from '@/app/components/recommendation/RecommendationWizard';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Home } from 'lucide-react';
+import RecommendationWizard from "@/app/components/recommendation/RecommendationWizard";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Home } from "lucide-react";
 
 export default function TestPage() {
   const router = useRouter();

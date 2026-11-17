@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation';
-
-export default function CheckoutPage() {
-  redirect('/carrito');
+import { redirect } from "next/navigation";
+export default function Page() {
+  redirect("/tienda/carrito");
 }

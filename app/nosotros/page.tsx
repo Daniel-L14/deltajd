@@ -1,8 +1,8 @@
-'use client';
+"use client";
+import { useSyncExternalStore } from "react";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Sparkles,
   ArrowLeft,
@@ -11,16 +11,16 @@ import {
   Clock,
   Award,
   Layers,
-  Cpu
-} from 'lucide-react';
+  Cpu,
+} from "lucide-react";
 
 export default function NosotrosPage() {
-  const [year, setYear] = useState<number>(2026);
+  const year = useSyncExternalStore(
+    () => () => {},
+    () => new Date().getFullYear(),
+    () => 2026,
+  );
   const router = useRouter();
-
-  useEffect(() => {
-    setYear(new Date().getFullYear());
-  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
@@ -46,19 +46,24 @@ export default function NosotrosPage() {
             <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
               <Sparkles className="w-5 h-5" />
             </div>
-            <span className="text-xl font-bold tracking-widest text-white">DELTA</span>
+            <span className="text-xl font-bold tracking-widest text-white">
+              DELTA
+            </span>
           </Link>
         </div>
       </header>
 
       {/* Hero de Nosotros */}
       <section className="px-6 py-16 max-w-4xl mx-auto text-center space-y-4">
-        <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Nuestra Esencia</span>
+        <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
+          Nuestra Esencia
+        </span>
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
           TRADICIÓN Y <span className="text-amber-400">TECNOLOGÍA</span>
         </h1>
         <p className="text-slate-400 text-sm max-w-xl mx-auto leading-relaxed">
-          Conoce la historia detrás de la marca que revoluciona el arte de la perfumería fina en Bogotá a través de un ecosistema digital avanzado.
+          Conoce la historia detrás de la marca que revoluciona el arte de la
+          perfumería fina en Bogotá a través de un ecosistema digital avanzado.
         </p>
       </section>
 
@@ -66,16 +71,21 @@ export default function NosotrosPage() {
       <section className="px-6 py-12 max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         <div className="space-y-4">
           <h2 className="text-2xl font-bold text-white">
-            El Origen de <span className="text-amber-400">DELTA Perfumería</span>
+            El Origen de{" "}
+            <span className="text-amber-400">DELTA Perfumería</span>
           </h2>
           <p className="text-xs text-slate-400 leading-relaxed">
-            **DELTA** nació con la vocación de transformar aceites esenciales y fragancias de alta maceración en experiencias exclusivas para el paladar olfativo más exigente de Bogotá.
+            DELTA reúne un catálogo de fragancias y herramientas para ayudarte a
+            elegir según tus preferencias.
           </p>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Cada frasco es ensamblado mediante procesos de refinamiento artesanal, seleccionando ingredientes finos y honrando el balance entre notas de salida, corazón y fondo.
+            Consulta en cada producto su marca, presentación y notas
+            registradas. Nuestro equipo puede orientarte antes de comprar.
           </p>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Nuestra plataforma digital de última generación optimiza la selección del catálogo, automatiza la atención de pedidos y moderniza la interacción entre la casa perfumista y sus clientes.
+            Nuestra plataforma digital de última generación optimiza la
+            selección del catálogo, automatiza la atención de pedidos y
+            moderniza la interacción entre la casa perfumista y sus clientes.
           </p>
         </div>
 
@@ -83,7 +93,7 @@ export default function NosotrosPage() {
           <div className="p-4 bg-gradient-to-br from-amber-500/20 to-slate-950 rounded-2xl border border-amber-500/20 text-center space-y-2">
             <Sparkles className="w-10 h-10 text-amber-400 mx-auto" />
             <h3 className="text-lg font-bold text-white">DELTA Signature</h3>
-            <p className="text-[11px] text-slate-400">Excelencia Olfativa Garantizada</p>
+            <p className="text-[11px] text-slate-400">Una elección personal</p>
           </div>
         </div>
       </section>
@@ -95,9 +105,12 @@ export default function NosotrosPage() {
             <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 w-fit">
               <Award className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-white">Ingredientes Seleccionados</h3>
+            <h3 className="text-base font-bold text-white">
+              Ingredientes Seleccionados
+            </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Trabajamos con extractos puros y esencias importadas que garantizan durabilidad e intensidad.
+              Consulta los atributos de cada producto. La duración percibida
+              depende de las condiciones de uso.
             </p>
           </div>
 
@@ -105,9 +118,12 @@ export default function NosotrosPage() {
             <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 w-fit">
               <Layers className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-white">Maceración de Autor</h3>
+            <h3 className="text-base font-bold text-white">
+              Preferencias personales
+            </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Cada fórmula reposa el tiempo óptimo para asegurar que la estela y la fijación sean impecables.
+              El test combina presupuesto, familia olfativa, ocasión y clima
+              para ordenar las opciones disponibles.
             </p>
           </div>
 
@@ -115,9 +131,12 @@ export default function NosotrosPage() {
             <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 w-fit">
               <Cpu className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-white">Tecnología Web Avanzada</h3>
+            <h3 className="text-base font-bold text-white">
+              Tecnología Web Avanzada
+            </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Diseño de software con Next.js 16 para una navegación fluida, ágil e intuitiva en cualquier dispositivo.
+              Diseño de software con Next.js 16 para una navegación fluida, ágil
+              e intuitiva en cualquier dispositivo.
             </p>
           </div>
         </div>
@@ -126,8 +145,12 @@ export default function NosotrosPage() {
       {/* Ubicación y Horarios */}
       <section className="px-6 py-16 max-w-6xl mx-auto w-full space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-white">Visita Nuestra Boutique</h2>
-          <p className="text-xs text-slate-400">Ven a experimentar nuestras colecciones exclusivas en persona.</p>
+          <h2 className="text-2xl font-bold text-white">
+            Visita Nuestra Boutique
+          </h2>
+          <p className="text-xs text-slate-400">
+            Consulta disponibilidad y condiciones de entrega con la tienda.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-slate-900 border border-slate-800 rounded-3xl p-8">
@@ -137,8 +160,12 @@ export default function NosotrosPage() {
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-white text-sm">Dirección Principal</h4>
-                <p className="text-xs text-slate-400">Bogotá, Colombia • Calle 23D # 104A - 25</p>
+                <h4 className="font-bold text-white text-sm">
+                  Dirección Principal
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Consulta con la tienda el punto de entrega o recogida.
+                </p>
               </div>
             </div>
 
@@ -147,14 +174,18 @@ export default function NosotrosPage() {
                 <Clock className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-white text-sm">Horarios de Atención</h4>
-                <p className="text-xs text-slate-400">Lunes a Domingo: 10:00 AM - 8:00 PM</p>
+                <h4 className="font-bold text-white text-sm">
+                  Horarios de Atención
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Confirma los horarios con nuestro equipo.
+                </p>
               </div>
             </div>
           </div>
 
           <div className="h-48 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-500 text-xs font-semibold">
-            Mapa Interactivo de Ubicación DELTA
+            Coordina tu entrega al confirmar el pedido.
           </div>
         </div>
       </section>
