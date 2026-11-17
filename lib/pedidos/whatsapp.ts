@@ -28,9 +28,22 @@ export function orderWhatsAppMessage(pedido: Pedido) {
   ].join("\n");
 }
 
-export function orderWhatsAppLink(message: string) {
+export function orderWhatsAppLink(message: string, phone = companyWhatsAppPhone) {
   const text = encodeURIComponent(message);
   const useClipboard = text.length > 6000;
-  const chat = `https://wa.me/${companyWhatsAppPhone}`;
+  const chat = `https://wa.me/${phone}`;
   return { href: useClipboard ? chat : `${chat}?text=${text}`, useClipboard };
+}
+
+export function updatedOrderWhatsApp(pedido: Pedido) {
+  const message = `Hola. Te compartimos el resumen actualizado de tu pedido DELTA.\n\n${orderWhatsAppMessage(pedido)}`;
+  const original = pedido.cliente_telefono?.trim() ?? "";
+  const digits = original.replace(/\D/g, "");
+  const phone = original.startsWith("+") || /^57\d{10}$/.test(digits)
+    ? digits
+    : /^3\d{9}$/.test(digits) ? `57${digits}` : "";
+  const link = /^[1-9]\d{7,14}$/.test(phone)
+    ? orderWhatsAppLink(message, phone)
+    : { href: null, useClipboard: true };
+  return { message, ...link };
 }

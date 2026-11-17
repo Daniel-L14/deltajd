@@ -52,24 +52,11 @@ export function parseOrder(v: unknown) {
     telefono = textValue(b.cliente_telefono, "Teléfono", 7, 20);
   if (!/^[+\d ()-]{7,20}$/.test(telefono))
     throw new ApiError(400, "Teléfono inválido.");
-  if (!Array.isArray(b.items) || b.items.length < 1 || b.items.length > 50)
-    throw new ApiError(400, "El carrito debe contener entre 1 y 50 productos.");
-  const seen = new Set<string>();
-  const items = b.items.map((raw) => {
-    const i = record(raw);
-    const producto_id = uuid(i.producto_id);
-    if (seen.has(producto_id)) throw new ApiError(400, "Producto repetido.");
-    seen.add(producto_id);
-    return {
-      producto_id,
-      cantidad: numberValue(i.cantidad, "Cantidad", 1, 99, true),
-    };
-  });
   return {
     cliente_nombre: nombre,
     cliente_telefono: telefono,
     direccion,
-    items,
+    items: parseOrderItems(b.items, 1),
     ...(b.subtotal_visto_centavos === undefined
       ? {}
       : {
@@ -82,6 +69,34 @@ export function parseOrder(v: unknown) {
           ),
         }),
   };
+}
+function parseOrderItems(value: unknown, minimum: 0 | 1) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 50)
+    throw new ApiError(400, minimum === 0
+      ? "El pedido debe contener entre 1 y 50 productos."
+      : "El carrito debe contener entre 1 y 50 productos.");
+  const seen = new Set<string>();
+  return value.map((raw) => {
+    const line = record(raw);
+    const producto_id = uuid(line.producto_id);
+    const key = producto_id.toLowerCase();
+    if (seen.has(key)) throw new ApiError(400, "Producto repetido.");
+    seen.add(key);
+    return {
+      producto_id,
+      cantidad: numberValue(line.cantidad, "Cantidad", minimum, 99, true),
+    };
+  });
+}
+export function orderRevision(value: unknown) {
+  return numberValue(value, "Revisión del pedido", 0, 2_147_483_647, true);
+}
+export function parseOrderEdit(value: unknown) {
+  const data = record(value);
+  const items = parseOrderItems(data.items, 0);
+  if (items.every((line) => line.cantidad === 0))
+    throw new ApiError(400, "Conserva al menos un perfume o cancela el pedido.");
+  return { revision: orderRevision(data.revision), items };
 }
 /** Builds an ILIKE value from plain text, without PostgREST separators or wildcards. */
 export function searchPattern(value: string | null): string | null {

@@ -18,16 +18,29 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
     [error, setError] = useState(""),
     [copied, setCopied] = useState("");
   useEffect(() => {
-    let live = true;
-    api<{ pedido: Pedido }>(`/api/cuenta/pedidos/${encodeURIComponent(codigo)}`)
-      .then((d) => {
-        if (live) setPedido(d.pedido);
-      })
-      .catch((e) => {
-        if (live) setError(e.message);
-      });
+    let active: AbortController | undefined;
+    async function load() {
+      active?.abort();
+      const controller = new AbortController();
+      active = controller;
+      try {
+        const data = await api<{ pedido: Pedido }>(
+          `/api/cuenta/pedidos/${encodeURIComponent(codigo)}`,
+          { signal: controller.signal },
+        );
+        if (!controller.signal.aborted) {
+          setPedido(data.pedido);
+          setError("");
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) setError((e as Error).message);
+      }
+    }
+    void load();
+    window.addEventListener("focus", load);
     return () => {
-      live = false;
+      active?.abort();
+      window.removeEventListener("focus", load);
     };
   }, [codigo]);
   const message = pedido

@@ -3,9 +3,11 @@ import { Suspense } from "react";
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/client-api";
-import type { Pedido } from "@/lib/pedidos/types";
+import type { ItemPedido, Pedido } from "@/lib/pedidos/types";
 import { transitions } from "@/lib/validation";
 import { formatCOP, formatFecha } from "@/lib/format";
+import { updatedOrderWhatsApp } from "@/lib/pedidos/whatsapp";
+import OrderQuantityEditor from "@/app/components/admin/OrderQuantityEditor";
 interface History {
   id: string;
   estado: string;
@@ -40,6 +42,7 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
     [nota, setNota] = useState(""),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
+    [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false);
   const load = useCallback(async () => {
     try {
@@ -75,7 +78,7 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
     };
   }, [codigo]);
   async function action(suffix: string, data: unknown) {
-    if (!pedido) return;
+    if (!pedido || busy) return false;
     setBusy(true);
     setError("");
     setMessage("");
@@ -86,12 +89,25 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
       });
       if (suffix !== "whatsapp-aviso") setMessage("Cambio guardado.");
       await load();
+      return true;
     } catch (e) {
       setError((e as Error).message);
+      return false;
     } finally {
       setBusy(false);
     }
   }
+  const estado = pedido?.estado?.toLowerCase();
+  const pendiente = estado === "nuevo" || estado === "pendiente";
+  const items = pedido?.items ?? [];
+  const productos = items.filter(
+    (item): item is ItemPedido & { producto_id: string } => Boolean(item.producto_id),
+  );
+  const editable = pendiente && pedido?.stock_reserved && pedido.items_revision !== undefined &&
+    productos.length > 0 && productos.length === items.length;
+  const whatsapp = pedido && pendiente && (pedido.items_revision ?? 0) > 0
+    ? updatedOrderWhatsApp(pedido)
+    : null;
   return (
     <div className="space-y-5">
       <Link href="/admin/pedidos">← Pedidos</Link>
@@ -126,20 +142,32 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
               </p>
             ))}
             <div className="flex flex-wrap gap-3">
+              {editable && !editing && (
+                <button className="delta-button" disabled={busy} onClick={() => {
+                  setMessage("");
+                  setError("");
+                  setEditing(true);
+                }}>
+                  Editar pedido
+                </button>
+              )}
               {(transitions[pedido.estado?.toLowerCase() === "pendiente" ? "nuevo" : pedido.estado] ?? []).map((estado) => (
                 <button
                   className="delta-button"
-                  disabled={busy}
+                  disabled={busy || editing}
                   key={estado}
                   onClick={() => {
                     if (
                       confirm(
-                        `¿Confirmar estado ${estado}? ${estado === "pagado" ? "Verifica primero que recibiste el pago." : ""}`,
+                        estado === "pagado"
+                          ? `¿Confirmas que recibiste el pago de ${formatCOP(pedido.total)}?`
+                          : `¿Confirmar estado ${estado}?`,
                       )
                     )
                       void action("estado", {
                         estado,
                         nota: nota || undefined,
+                        ...(estado === "pagado" ? { revision: pedido.items_revision } : {}),
                       });
                   }}
                 >
@@ -148,7 +176,7 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
               ))}
               <button
                 className="delta-secondary"
-                disabled={busy}
+                disabled={busy || editing}
                 onClick={() =>
                   void action("whatsapp", {
                     confirmar: !pedido.whatsapp_confirmado,
@@ -166,6 +194,53 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
               conciliación.
             </p>
           </div>
+          {editing && editable && (
+            <OrderQuantityEditor
+              items={productos}
+              busy={busy}
+              onCancel={() => {
+                setEditing(false);
+                setError("");
+              }}
+              onSave={async (items) => {
+                if (await action("cantidades", { items, revision: pedido.items_revision })) {
+                  setEditing(false);
+                }
+              }}
+            />
+          )}
+          {error && (
+            <button className="delta-secondary" disabled={busy} onClick={async () => {
+              setBusy(true);
+              setEditing(false);
+              setError("");
+              setMessage("");
+              await load();
+              setBusy(false);
+            }}>
+              Recargar pedido
+            </button>
+          )}
+          {whatsapp && !editing && (
+            <section className="delta-card space-y-3" aria-labelledby="resumen-actualizado">
+              <h2 id="resumen-actualizado" className="delta-section-title">
+                Compartir el <em>pedido actualizado</em>
+              </h2>
+              {whatsapp.href && (
+                <a className="delta-secondary inline-flex" href={whatsapp.href} target="_blank" rel="noopener noreferrer">
+                  Abrir WhatsApp del cliente
+                </a>
+              )}
+              {whatsapp.useClipboard ? (
+                <label className="block text-sm text-slate-300">
+                  Copia el resumen y pégalo en la conversación con el cliente.
+                  <textarea className="delta-input mt-2 block w-full" readOnly rows={5} value={whatsapp.message} />
+                </label>
+              ) : (
+                <p className="text-sm text-slate-300">Revisa el resumen y pulsa Enviar dentro de WhatsApp.</p>
+              )}
+            </section>
+          )}
           {notice && (
             <section className="delta-card space-y-3" aria-labelledby="aviso-whatsapp">
               <h2 id="aviso-whatsapp" className="delta-section-title">
@@ -181,7 +256,7 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
                 (notice.status === "pending" || notice.status === "failed") && (
                   <button
                     className="delta-secondary"
-                    disabled={busy}
+                    disabled={busy || editing}
                     onClick={() => void action("whatsapp-aviso", {})}
                   >
                     {notice.status === "failed" ? "Reintentar aviso" : "Enviar aviso"}
@@ -205,7 +280,7 @@ function Content({ params }: { params: Promise<{ codigo: string }> }) {
                 onChange={(e) => setNota(e.target.value)}
               />
             </label>
-            <button className="delta-secondary" disabled={busy}>
+            <button className="delta-secondary" disabled={busy || editing}>
               Guardar nota
             </button>
           </form>

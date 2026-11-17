@@ -46,6 +46,8 @@ export type Pedido = {
   whatsapp_confirmado?: boolean; // <-- AQUÍ ESTÁ LA SOLUCIÓN
   created_at: string;
   updated_at?: string;
+  items_revision?: number;
+  stock_reserved?: boolean;
 };
 
 export type ItemInput = {

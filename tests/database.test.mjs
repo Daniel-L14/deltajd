@@ -268,6 +268,129 @@ test("Migración, integridad de pedidos, puntos, stock y permisos RLS", async ()
   await db.close();
 });
 
+test("Editar un pedido aplica total, reserva e historial como una sola operación", async () => {
+  const db = new PGlite();
+  const admin = "11111111-1111-4111-8111-111111111111";
+  const buyer = "22222222-2222-4222-8222-222222222222";
+  const first = "33333333-3333-4333-8333-333333333333";
+  const second = "44444444-4444-4444-8444-444444444444";
+  try {
+    await db.exec(`
+      CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
+      CREATE SCHEMA auth;
+      CREATE TABLE auth.users(id uuid PRIMARY KEY,email text);
+      CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT null::uuid $$;
+    `);
+    await db.exec(fs.readFileSync(new URL("../migrations/002_delta_seguro.sql", import.meta.url), "utf8"));
+    // El proyecto alojado calcula el subtotal en una columna generada.
+    await db.exec(`
+      ALTER TABLE public.pedido_items DROP COLUMN subtotal;
+      ALTER TABLE public.pedido_items ADD COLUMN subtotal numeric
+        GENERATED ALWAYS AS (precio * cantidad) STORED;
+    `);
+    const migration = fs.readFileSync(new URL("../migrations/006_editar_pedido.sql", import.meta.url), "utf8");
+    await db.exec(migration);
+    await db.exec(migration);
+    await db.query("insert into auth.users(id,email) values ($1,'admin@example.test'),($2,'buyer@example.test')", [admin, buyer]);
+    await db.query("insert into profiles(id,role) values ($1,'ADMIN'),($2,'CLIENTE')", [admin, buyer]);
+    await db.query(
+      "insert into productos(id,name,price,stock,is_active) values ($1,'Cedro',100000,8,true),($2,'Rosa',20000,1,true)",
+      [first, second],
+    );
+    const items = (a, b) => [
+      { producto_id: first, cantidad: a },
+      ...(b === undefined ? [] : [{ producto_id: second, cantidad: b }]),
+    ];
+    const create = async (lines) => (await db.query(
+      "select delta_crear_pedido_v2($1,'buyer@example.test',gen_random_uuid(),$2) as pedido",
+      [buyer, { cliente_nombre: "Prueba", cliente_telefono: "3001234567", direccion: "Calle 1 Bogotá", items: lines }],
+    )).rows[0].pedido;
+    await db.exec("set role service_role");
+    const order = await create(items(5, 1));
+    const update = (revision, lines, actor = admin) => db.query(
+      "select delta_editar_pedido_v1($1,$2,$3,$4::jsonb)",
+      [order.id, actor, revision, JSON.stringify(lines)],
+    );
+    const current = async () => (await db.query(
+      "select codigo,total,items,items_revision from pedidos where id=$1", [order.id],
+    )).rows[0];
+    const stock = async () => (await db.query(
+      "select stock from productos where id in ($1,$2) order by id", [first, second],
+    )).rows.map((row) => row.stock);
+    const history = async () => (await db.query(
+      "select nota,actor_id from pedido_historial where pedido_id=$1 order by creado_at", [order.id],
+    )).rows;
+
+    await assert.rejects(() => update(0, items(3, 0), buyer), /No autorizado/);
+    await assert.rejects(() => update(0, items(3, 2)), /No hay disponibilidad suficiente para Rosa/);
+    assert.deepEqual(await stock(), [3, 0]);
+    assert.equal(Number((await current()).total), 520000);
+    assert.equal((await history()).length, 1);
+
+    // El catálogo puede cambiar de precio después de la reserva original.
+    await db.query("update productos set price=120000 where id=$1", [first]);
+    await update(0, items(3, 0));
+    const decreased = await current();
+    assert.equal(decreased.codigo, order.codigo);
+    assert.equal(Number(decreased.total), 300000);
+    assert.equal(decreased.items_revision, 1);
+    assert.deepEqual(decreased.items.map(({ cantidad, precio }) => [cantidad, precio]), [[3, 100000]]);
+    assert.deepEqual(await stock(), [5, 1]);
+    assert.equal((await history()).at(-1).actor_id, admin);
+    assert.match((await history()).at(-1).nota, /Cedro: 5 → 3/);
+
+    await assert.rejects(() => update(0, items(7)), /El pedido cambió/);
+    await assert.rejects(() => update(1, items(0)), /al menos un perfume/);
+    await update(1, items(7));
+    await update(2, items(7));
+    assert.deepEqual(await stock(), [1, 1]);
+    assert.equal(Number((await current()).total), 700000);
+    assert.equal((await current()).items_revision, 2);
+    assert.equal((await history()).length, 3);
+    const { rows: [line] } = await db.query(
+      "select cantidad,subtotal from pedido_items where pedido_id=$1", [order.id],
+    );
+    assert.deepEqual([line.cantidad, Number(line.subtotal)], [7, 700000]);
+
+    await assert.rejects(() => db.query(
+      "select delta_pagar_pedido_verificado_v1($1,$2,1,null)", [order.id, admin],
+    ), /verifica el nuevo total/);
+    await db.query("select delta_pagar_pedido_verificado_v1($1,$2,2,null)", [order.id, admin]);
+    await assert.rejects(() => update(2, items(3)), /pendientes de pago/);
+    const { rows: [ledger] } = await db.query(
+      "select points from delta_points_ledger where pedido_id=$1", [order.id],
+    );
+    assert.equal(ledger.points, 700);
+
+    const canceled = await create(items(1));
+    // Verifica la compatibilidad con una base que usa un subtotal ordinario.
+    await db.exec("reset role");
+    await db.exec(`
+      ALTER TABLE public.pedido_items ALTER COLUMN subtotal DROP EXPRESSION;
+      SET ROLE service_role;
+    `);
+    await db.query("update productos set stock=stock+1 where id=$1", [first]);
+    await db.query("select delta_editar_pedido_v1($1,$2,0,$3::jsonb)", [
+      canceled.id, admin, JSON.stringify(items(2)),
+    ]);
+    const { rows: [ordinary] } = await db.query(
+      "select cantidad,subtotal from pedido_items where pedido_id=$1", [canceled.id],
+    );
+    assert.deepEqual([ordinary.cantidad, Number(ordinary.subtotal)], [2, 240000]);
+    await db.query("select delta_estado_pedido_v2($1,'cancelado',$2,null)", [canceled.id, admin]);
+    assert.deepEqual(await stock(), [2, 1]);
+
+    await db.exec("reset role");
+    for (const role of ["anon", "authenticated"]) {
+      await db.exec(`set role ${role}`);
+      await assert.rejects(() => update(2, items(1)), /permission denied/);
+      await db.exec("reset role");
+    }
+  } finally {
+    await db.close();
+  }
+});
+
 test("La migración conserva pedidos y productos existentes compatibles", async () => {
   const db = new PGlite();
   await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE SCHEMA auth;CREATE TABLE auth.users(id uuid PRIMARY KEY);CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT null::uuid$$;

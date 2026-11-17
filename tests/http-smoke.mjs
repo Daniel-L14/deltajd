@@ -49,6 +49,13 @@ try {
       );
     console.log(`PASS HTTP ${route}: ${status}`);
   }
+  const edit = await fetch(`http://127.0.0.1:${port}/api/pedidos/00000000-0000-0000-0000-000000000001/cantidades`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  assert.equal(edit.status, 401, "La edición requiere una sesión administrativa");
+  console.log("PASS HTTP editar pedido sin sesión: 401");
 } finally {
   child.kill("SIGTERM");
 }

@@ -43,6 +43,18 @@ Se abre el chat de DELTA en el **+57 314 235 2488** con el mensaje
 preparado. El cliente pulsa **Enviar** dentro de WhatsApp. El número
 comercial se configura en `lib/pedidos/whatsapp.ts`.
 
+### Ajustar un pedido pendiente
+
+Aplica `migrations/006_editar_pedido.sql` en Supabase antes de actualizar la
+aplicación. En **Administración → Pedidos → Detalle → Editar pedido**, ajusta
+las cantidades de los perfumes ya incluidos y guarda. El código y los precios
+unitarios se conservan. DELTA recalcula el total, ajusta la reserva de inventario
+y registra el cambio en el historial.
+
+El cliente ve la actualización en **Mis pedidos**. Desde el detalle del panel
+puedes abrir WhatsApp del cliente con el nuevo resumen. Registra el pago por
+el importe actualizado una vez lo hayas recibido.
+
 ### Aviso automático opcional
 
 Al confirmar un pedido, DELTA puede disparar un aviso automático

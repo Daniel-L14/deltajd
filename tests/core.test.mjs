@@ -80,6 +80,29 @@ test("El botón de WhatsApp apunta al número de DELTA y conserva el mensaje com
   assert.equal(large.useClipboard, true);
 });
 
+test("El resumen actualizado se dirige al cliente y refleja el nuevo total", () => {
+  const pedido = { ...savedOrder, total: 180000, items: [savedOrder.items[0]] };
+  const { href, message } = whatsapp.updatedOrderWhatsApp(pedido);
+  const url = new URL(href);
+  assert.equal(url.pathname, "/573001234567");
+  assert.equal(url.searchParams.get("text"), message);
+  assert.ok(message.includes("DELTA-PRUEBA"));
+  assert.match(message, /2 × Cedro & Ámbar/);
+  assert.ok(message.includes(formats.formatCOP(pedido.total)));
+  assert.doesNotMatch(message, /Rosa/);
+  assert.equal(whatsapp.updatedOrderWhatsApp({ ...pedido, cliente_telefono: "1234567" }).href, null);
+});
+
+test("La edición admite retirar una línea y rechaza un pedido vacío o sin revisión", () => {
+  const second = "22222222-2222-4222-8222-222222222222";
+  const items = [{ producto_id: uuid, cantidad: 0 }, { producto_id: second, cantidad: 3 }];
+  const payload = { revision: 0, items };
+  assert.equal(validation.parseOrderEdit(payload).items[0].cantidad, 0);
+  assert.throws(() => validation.parseOrderEdit({ ...payload, items: [items[0]] }), /al menos un perfume/);
+  assert.throws(() => validation.parseOrderEdit({ items }), /Revisión/);
+  assert.throws(() => validation.parseOrderEdit({ ...payload, items: [items[0], items[0]] }), /repetido/);
+});
+
 test("El aviso adjunta el pedido completo y evita reenviar después de la aceptación de Meta", async () => {
   let status = "pending";
   let messageId;
