@@ -1,4 +1,5 @@
 "use client";
+import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -238,7 +239,9 @@ export default function Checkout() {
                   key={i.id}
                   className="flex flex-wrap items-center justify-between gap-3"
                 >
-                  <div>
+                  <div className="flex items-start gap-3">
+                    <ProductPhoto src={product ? product.image_url : i.image} name={i.name} compact className="size-16 shrink-0" />
+                    <div>
                     <p>{i.name}</p>
                     <p>{formatCOP(product?.price ?? i.price)}</p>
                     {product === null && (
@@ -252,6 +255,7 @@ export default function Checkout() {
                         Solo quedan {product.stock} unidades.
                       </p>
                     )}
+                  </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button

@@ -15,6 +15,7 @@ export interface FavItem {
   name: string;
   price: number;
   family?: string;
+  image_url?: string | null;
 }
 export interface UltimoPedido extends PedidoResumen {
   codigo?: string;

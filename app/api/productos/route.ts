@@ -11,6 +11,7 @@ import {
   uuid,
   ApiError,
 } from "@/lib/validation";
+import { photoForm, uploadProductPhoto } from "@/lib/product-photo";
 import { matchingFamilies, PRODUCT_COLUMNS } from "@/lib/products";
 export async function GET(request: Request) {
   await connection();
@@ -48,7 +49,19 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { user } = await requireAdmin();
-    const b = record(await body(request));
+    const multipart = request.headers.get("content-type")?.startsWith("multipart/form-data;");
+    const form = multipart ? await photoForm(request) : null;
+    let input: unknown;
+    if (form) {
+      try {
+        input = JSON.parse(String(form.get("product")));
+      } catch {
+        throw new ApiError(400, "Los datos del producto no son válidos.");
+      }
+    } else {
+      input = await body(request);
+    }
+    const b = record(input);
     const payload = {
       name: textValue(b.name, "Nombre", 2, 120),
       brand: textValue(b.brand, "Marca", 1, 100),
@@ -65,7 +78,9 @@ export async function POST(request: Request) {
         b.presentation_ml === null
           ? null
           : numberValue(b.presentation_ml, "Mililitros", 1, 5000, true),
-      image_url: textValue(b.image_url ?? "", "Imagen", 0, 1000) || null,
+      ...(Object.hasOwn(b, "image_url") ? {
+        image_url: textValue(b.image_url ?? "", "Imagen", 0, 1000) || null,
+      } : {}),
     };
     if (
       !["ECONOMICO", "MEDIO", "PREMIUM"].includes(payload.budget_category) ||
@@ -83,7 +98,10 @@ export async function POST(request: Request) {
       b.expected_stock === undefined
         ? null
         : numberValue(b.expected_stock, "Stock anterior", 0, 100000, true);
-    const { data, error } = await createAdminClient().rpc(
+    const db = createAdminClient();
+    const photo = form ? await uploadProductPhoto(db, form.get("photo")) : null;
+    if (photo) payload.image_url = photo.url;
+    const { data, error } = await db.rpc(
       "delta_guardar_producto_v2",
       {
         p_id: id,
@@ -94,7 +112,11 @@ export async function POST(request: Request) {
       },
     );
     if (error) {
-      if (error.code === "P0001") return json({ error: error.message }, 409);
+      // An unclear transport error may have committed. Keep its asset available.
+      if (error.code === "P0001") {
+        await photo?.discard();
+        return json({ error: error.message }, 409);
+      }
       throw error;
     }
     return json({ product: data });

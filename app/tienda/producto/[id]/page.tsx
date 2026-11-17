@@ -1,8 +1,8 @@
 "use client";
+import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { Suspense } from "react";
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { api } from "@/lib/client-api";
 import type { Product } from "@/lib/products";
 import { useCart } from "@/app/context/CartContext";
@@ -34,20 +34,7 @@ function Content({ params }: { params: Promise<{ id: string }> }) {
         <p>Cargando…</p>
       ) : (
         <article className="delta-card grid md:grid-cols-2 gap-8">
-          {product.image_url ? (
-            <Image
-              unoptimized
-              src={product.image_url}
-              alt={product.name}
-              width={600}
-              height={600}
-              className="w-full max-h-96 object-contain"
-            />
-          ) : (
-            <div className="grid place-items-center min-h-48">
-              Fotografía pendiente
-            </div>
-          )}
+          <ProductPhoto src={product.image_url} name={product.name} className="aspect-square w-full" />
           <div className="space-y-4">
             <p>{product.brand}</p>
             <h1 className="text-3xl">{product.name}</h1>
@@ -79,6 +66,7 @@ function Content({ params }: { params: Promise<{ id: string }> }) {
                   id,
                   name: product.name,
                   price: product.price,
+                  image: product.image_url ?? undefined,
                   quantity: 1,
                 })
               }

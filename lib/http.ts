@@ -21,7 +21,7 @@ export function failure(e: unknown) {
     500,
   );
 }
-export async function body(request: Request) {
+export function assertSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");
   const target = new URL(request.url);
@@ -38,8 +38,10 @@ export async function body(request: Request) {
       origin !== `${target.protocol}//${host}`)
   )
     throw new ApiError(403, "Origen no permitido.");
-  if (!request.headers.get("content-type")?.includes("application/json"))
-    throw new ApiError(415, "Se requiere JSON.");
+}
+export async function readBytes(request: Request, limit: number) {
+  if (Number(request.headers.get("content-length")) > limit)
+    throw new ApiError(413, "Solicitud demasiado grande.");
   // Límite aplicado al stream, incluso sin Content-Length.
   const reader = request.body?.getReader();
   if (!reader) throw new ApiError(400, "Faltan datos.");
@@ -49,7 +51,7 @@ export async function body(request: Request) {
     const { done, value } = await reader.read();
     if (done) break;
     size += value.byteLength;
-    if (size > 32768) {
+    if (size > limit) {
       await reader.cancel();
       throw new ApiError(413, "Solicitud demasiado grande.");
     }
@@ -61,8 +63,15 @@ export async function body(request: Request) {
     all.set(c, off);
     off += c.length;
   }
+  return all;
+}
+export async function body(request: Request) {
+  assertSameOrigin(request);
+  if (!request.headers.get("content-type")?.includes("application/json"))
+    throw new ApiError(415, "Se requiere JSON.");
+  const bytes = await readBytes(request, 32768);
   try {
-    return JSON.parse(new TextDecoder().decode(all)) as unknown;
+    return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
   } catch {
     throw new ApiError(400, "JSON inválido.");
   }

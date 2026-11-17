@@ -1,8 +1,8 @@
 "use client";
+import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { api } from "@/lib/client-api";
 import { type Product, FAMILIES } from "@/lib/products";
 import { formatCOP } from "@/lib/format";
@@ -115,21 +115,7 @@ export default function Store() {
                 cart.find((i) => i.id === product.id)?.quantity ?? 0;
               return (
                 <article key={product.id} className="delta-card space-y-3">
-                  {product.image_url ? (
-                    <Image
-                      unoptimized
-                      src={product.image_url}
-                      alt={product.name}
-                      loading="lazy"
-                      width={400}
-                      height={320}
-                      className="h-48 w-full object-contain bg-slate-950 rounded-xl"
-                    />
-                  ) : (
-                    <div className="h-40 grid place-items-center bg-slate-950 rounded-xl text-amber-300">
-                      Fotografía pendiente
-                    </div>
-                  )}
+                  <ProductPhoto src={product.image_url} name={product.name} className="aspect-[4/3] w-full" />
                   <p className="text-sm text-slate-400">
                     {product.brand} · {product.family}
                   </p>
@@ -159,6 +145,7 @@ export default function Store() {
                           id: product.id,
                           name: product.name,
                           price: product.price,
+                          image: product.image_url ?? undefined,
                           quantity: 1,
                         })
                       }

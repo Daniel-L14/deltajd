@@ -18,3 +18,20 @@ npm run dev
 ```
 
 Consulta `VALIDACION.md` para conocer qué se verificó y qué requiere tu entorno real.
+
+## Fotografías de productos
+
+En **Administración → Productos e inventario**, selecciona el perfume y arrastra
+una imagen JPG, PNG o WebP de hasta 4 MB. Para un perfume existente, usa
+**Guardar solo la foto**. Para uno nuevo, usa **Guardar producto**.
+
+En un proyecto de Supabase nuevo, aplica las migraciones de DELTA en orden y
+prepara una vez el bucket de fotos con las variables de Supabase configuradas.
+
+```bash
+node --env-file=.env.local scripts/configurar-fotos.mjs
+```
+
+El bucket sirve las fotos del catálogo. Las escrituras pasan por la
+autorización de administrador de DELTA. Las credenciales se mantienen en el
+entorno del servidor.

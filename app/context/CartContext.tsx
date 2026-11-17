@@ -75,7 +75,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return found
         ? prev.map((x) =>
             x.id === i.id
-              ? { ...x, quantity: Math.min(99, x.quantity + 1) }
+              ? { ...x, image: i.image, quantity: Math.min(99, x.quantity + 1) }
               : x,
           )
         : [...prev, { ...i, quantity: 1 }];

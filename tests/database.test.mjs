@@ -55,6 +55,16 @@ test("Migración, integridad de pedidos, puntos, stock y permisos RLS", async ()
     [product, admin, "Stock inicial"],
   );
   const id = r.product.id;
+  await db.exec(fs.readFileSync(new URL("../migrations/004_conservar_foto_producto.sql", import.meta.url), "utf8"));
+  const photo = "https://example.test/perfume.webp";
+  await db.query("update productos set image_url=$2 where id=$1", [id, photo]);
+  const details = { ...product };
+  delete details.image_url;
+  const updated = await db.query(
+    "select delta_guardar_producto_v2($1,$2,$3,$4,$5) as product",
+    [id, details, admin, "Editar detalles", 2],
+  );
+  assert.equal(updated.rows[0].product.image_url, photo);
   const payload = {
     cliente_nombre: "Prueba",
     cliente_telefono: "3001234567",

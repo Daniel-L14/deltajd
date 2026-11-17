@@ -1,5 +1,6 @@
 "use client";
 
+import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import Link from "next/link";
 import {
   Check,
@@ -221,6 +222,7 @@ export default function MemberPanel({
                       key={f.id}
                       className="flex items-center gap-1.5 rounded-full border border-rose-400/20 bg-rose-500/5 pl-3 pr-1.5 py-1 text-xs text-slate-200"
                     >
+                      <ProductPhoto src={f.image_url} name={f.name} compact className="size-8 shrink-0" />
                       {f.name}
                       <button
                         onClick={() => toggleFav(f)}

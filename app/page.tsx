@@ -1,5 +1,6 @@
 "use client";
 
+import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Navbar from "@/app/components/layout/Navbar";
 import { api } from "@/lib/client-api";
@@ -39,6 +40,7 @@ interface Destacado {
   family: string;
   price: number;
   description: string;
+  image_url: string | null;
 }
 
 const NOTAS = [
@@ -54,12 +56,6 @@ const NOTAS = [
   "Pimienta rosa",
   "Jazmín silvestre",
 ];
-
-const ARTE_FAMILIA: Record<string, string> = {
-  "Orientales & Madera": "from-amber-700/40 via-wine-900 to-slate-950",
-  "Cítricos & Florales": "from-rose-500/25 via-wine-800 to-slate-950",
-  "Extractos Concentrados": "from-gold-500/30 via-wine-900 to-slate-950",
-};
 
 const PASOS_RECOMENDADOR = [
   "Tu presupuesto",
@@ -123,7 +119,7 @@ export default function HomePage() {
   }, [showWelcome, user]);
 
   const handleAdd = (p: Destacado) => {
-    addToCart({ id: p.id, name: p.name, price: Number(p.price), quantity: 1 });
+    addToCart({ id: p.id, name: p.name, price: Number(p.price), quantity: 1, image: p.image_url ?? undefined });
     setRecienAgregado(p.id);
     setTimeout(
       () => setRecienAgregado((cur) => (cur === p.id ? null : cur)),
@@ -505,14 +501,9 @@ export default function HomePage() {
                   className="group overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 transition-colors hover:border-gold-400/40"
                 >
                   <div
-                    className={`relative h-44 bg-gradient-to-br ${ARTE_FAMILIA[p.family] ?? "from-gold-500/20 via-wine-900 to-slate-950"} flex items-center justify-center overflow-hidden`}
+                    className="relative overflow-hidden"
                   >
-                    <span
-                      aria-hidden
-                      className="font-display text-[9rem] leading-none italic text-gold-300/15 select-none transition-transform duration-500 group-hover:scale-110"
-                    >
-                      {p.name.charAt(0)}
-                    </span>
+                    <ProductPhoto src={p.image_url} name={p.name} className="aspect-[4/3] w-full rounded-none border-0" />
                     <span className="absolute left-4 top-4 rounded-full border border-gold-400/25 bg-slate-950/60 px-3 py-1 text-[11px] font-semibold text-gold-300 backdrop-blur">
                       {p.family}
                     </span>

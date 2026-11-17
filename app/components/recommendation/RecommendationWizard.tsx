@@ -1,4 +1,5 @@
 "use client";
+import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/client-api";
@@ -107,8 +108,9 @@ export default function Wizard() {
           {results.map(({ product, score, reasons }) => (
             <article
               key={product.id}
-              className="border border-slate-700 rounded-xl p-4 space-y-3"
+              className="delta-card space-y-3 transition-colors hover:border-amber-400/40"
             >
+              <ProductPhoto src={product.image_url} name={product.name} className="aspect-[4/3] w-full" />
               <h2 className="text-xl">{product.name}</h2>
               <p>{score}% de coincidencia con las reglas</p>
               <ul className="text-sm text-slate-300 list-disc pl-4">

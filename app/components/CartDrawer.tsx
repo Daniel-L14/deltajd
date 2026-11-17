@@ -1,4 +1,5 @@
 "use client";
+import ProductPhoto from "@/app/components/productos/ProductPhoto";
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useCart } from "@/app/context/CartContext";
@@ -36,7 +37,8 @@ export default function CartDrawer({
       <ul className="space-y-4 my-6">
         {cart.map((i) => (
           <li key={i.id} className="flex justify-between gap-3">
-            <span>
+            <ProductPhoto src={i.image} name={i.name} compact className="size-12 shrink-0" />
+            <span className="flex-1">
               {i.name} × {i.quantity}
             </span>
             <button

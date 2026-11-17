@@ -4,6 +4,8 @@ import { api } from "@/lib/client-api";
 import { type Product, FAMILIES } from "@/lib/products";
 import { formatCOP } from "@/lib/format";
 import Link from "next/link";
+import ProductPhotoPicker from "@/app/components/admin/ProductPhotoPicker";
+import ProductPhoto from "@/app/components/productos/ProductPhoto";
 const empty = {
   name: "",
   brand: "",
@@ -11,7 +13,6 @@ const empty = {
   price: 0,
   stock: 0,
   description: "",
-  image_url: "",
   presentation_ml: null as number | null,
   concentration: "",
   notes: "",
@@ -26,6 +27,7 @@ export default function Inventory() {
     [count, setCount] = useState(0),
     [form, setForm] = useState(empty),
     [editing, setEditing] = useState<Product | null>(null),
+    [photo, setPhoto] = useState<File | null>(null),
     [reason, setReason] = useState(""),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
@@ -71,7 +73,13 @@ export default function Inventory() {
   }, [query]);
   function edit(p: Product) {
     setEditing(p);
-    setForm({ ...p, image_url: p.image_url ?? "" });
+    setForm({
+      name: p.name, brand: p.brand, family: p.family, price: p.price, stock: p.stock,
+      description: p.description ?? "", presentation_ml: p.presentation_ml,
+      concentration: p.concentration, notes: p.notes, budget_category: p.budget_category,
+      occasion: p.occasion, climate_preference: p.climate_preference,
+    });
+    setPhoto(null);
     setReason("");
     setMessage("");
     document
@@ -84,22 +92,47 @@ export default function Inventory() {
     setError("");
     setMessage("");
     try {
+      // Editar metadatos conserva la foto actual si no se seleccionó un archivo.
+      const values = { ...form, id: editing?.id, expected_stock: editing?.stock, reason };
+      const payload = new FormData();
+      if (photo) {
+        payload.set("product", JSON.stringify(values));
+        payload.set("photo", photo);
+      }
       await api("/api/productos", {
         method: "POST",
-        body: JSON.stringify({
-          ...form,
-          id: editing?.id,
-          expected_stock: editing?.stock,
-          reason,
-        }),
+        body: photo ? payload : JSON.stringify(values),
       });
+      setPhoto(null);
       setForm(empty);
       setEditing(null);
       setReason("");
-      setMessage("Producto guardado. El movimiento de stock quedó registrado.");
+      setMessage("Producto guardado.");
       await load();
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function publishPhoto() {
+    if (!editing || !photo || busy) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    const body = new FormData();
+    body.set("photo", photo);
+    body.set("previous_url", editing.image_url ?? "");
+    try {
+      const result = await api<{ image_url: string }>(
+        `/api/productos/${editing.id}/foto`, { method: "POST", body },
+      );
+      setEditing({ ...editing, image_url: result.image_url });
+      setPhoto(null);
+      setMessage("Foto guardada. Ya está disponible en la tienda.");
+      await load();
+    } catch (error) {
+      setError((error as Error).message);
     } finally {
       setBusy(false);
     }
@@ -146,11 +179,21 @@ export default function Inventory() {
       <form
         id="product-form"
         onSubmit={save}
-        className="delta-card grid sm:grid-cols-2 gap-4"
+        className="delta-card grid gap-6 xl:grid-cols-[minmax(240px,1fr)_minmax(0,2fr)]"
       >
-        <h2 className="text-xl sm:col-span-2">
+        <h2 className="text-2xl font-semibold xl:col-span-2">
           {editing ? "Editar producto" : "Crear producto"}
         </h2>
+        <ProductPhotoPicker
+          key={editing?.id ?? "new"}
+          name={form.name}
+          current={editing?.image_url}
+          file={photo}
+          disabled={busy}
+          onChange={setPhoto}
+          onPublish={editing ? () => void publishPhoto() : undefined}
+        />
+        <fieldset disabled={busy} className="grid min-w-0 content-start gap-4 sm:grid-cols-2">
         {(
           [
             "name",
@@ -158,7 +201,6 @@ export default function Inventory() {
             "description",
             "notes",
             "concentration",
-            "image_url",
           ] as const
         ).map((key, i) => (
           <label key={key}>
@@ -169,7 +211,6 @@ export default function Inventory() {
                 "Descripción",
                 "Notas olfativas",
                 "Concentración",
-                "URL HTTPS de fotografía",
               ][i]
             }
             <input
@@ -177,7 +218,7 @@ export default function Inventory() {
               value={form[key]}
               required={key === "name" || key === "brand"}
               maxLength={
-                key === "description" ? 2000 : key === "image_url" ? 1000 : 500
+                key === "description" ? 2000 : 500
               }
               onChange={(e) => setForm({ ...form, [key]: e.target.value })}
             />
@@ -274,11 +315,13 @@ export default function Inventory() {
             onClick={() => {
               setEditing(null);
               setForm(empty);
+              setPhoto(null);
             }}
           >
             Cancelar edición
           </button>
         )}
+        </fieldset>
       </form>
       <label className="block">
         Buscar en inventario
@@ -301,7 +344,9 @@ export default function Inventory() {
               key={p.id}
               className="delta-card flex flex-wrap justify-between gap-3"
             >
-              <div>
+              <div className="flex items-center gap-4">
+                <ProductPhoto src={p.image_url} name={p.name} compact className="size-16 shrink-0" />
+                <div>
                 <h3 className="font-bold">
                   {p.name} {!p.is_active && "(Archivado)"}
                 </h3>
@@ -311,6 +356,7 @@ export default function Inventory() {
                 <p className="text-sm text-slate-400">
                   {p.family} · {p.budget_category}
                 </p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button

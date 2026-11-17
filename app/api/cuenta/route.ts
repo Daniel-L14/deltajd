@@ -15,7 +15,7 @@ export async function GET() {
       createAdminClient().rpc("delta_member_v2", { p_user_id: user.id }),
       db
         .from("delta_favorites")
-        .select("producto_id,productos(id,name,price,family)")
+        .select("producto_id,productos(id,name,price,family,image_url)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
     ]);
